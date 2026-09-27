@@ -147,7 +147,7 @@ function FieldInput({
   if (field.type === 'textarea') {
     input = (
       <textarea
-        rows={3}
+        rows={2}
         className={cx(ui.input, 'resize-y')}
         value={text}
         onChange={(e) => onChange(e.target.value)}
@@ -181,7 +181,8 @@ function FieldInput({
   }
 
   return (
-    <label className={cx(ui.label, field.type === 'textarea' && 'col-span-full')}>
+    // Long text boxes take two columns (the full row on phones)
+    <label className={cx(ui.label, field.type === 'textarea' && '@sm:col-span-2')}>
       {label}
       {input}
       {hint}

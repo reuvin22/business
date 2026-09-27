@@ -44,9 +44,13 @@ export const ui = {
 
   // ---- Forms ----
   form: 'flex flex-col gap-4',
-  formCard: 'mx-auto flex w-full max-w-240 flex-col gap-4 rounded-[10px] border border-line bg-surface p-7 max-sm:p-5',
-  formGrid: 'grid grid-cols-2 gap-4 max-sm:grid-cols-1',
-  formGrid3: 'grid grid-cols-3 gap-4 max-sm:grid-cols-1',
+  // Forms use the full width of the page. '@container' lets the grids below count the FORM's width
+  // (not the screen's), so the number of columns fits the space the form really has.
+  formCard:
+    '@container mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-[10px] border border-line bg-surface p-6 max-sm:p-4',
+  // 1 column on phones, then 2, 3, and 4 as the form gets wider
+  formGrid: 'grid grid-cols-1 gap-x-4 gap-y-3.5 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4',
+  formGrid3: 'grid grid-cols-1 gap-x-4 gap-y-3.5 @sm:grid-cols-2 @2xl:grid-cols-3',
   /** A row of buttons and short fields that wraps on small screens */
   actionRow: 'flex flex-wrap items-end gap-2.5 [&>label]:min-w-50 [&>label]:flex-1',
   /** A text field that grows to fill a row */
@@ -60,7 +64,7 @@ export const ui = {
   checkboxLabel: 'flex cursor-pointer items-start gap-2 text-[0.88rem] font-medium text-heading',
   checkbox: 'mt-0.75 accent-accent',
   input:
-    'w-full rounded-lg border border-line bg-surface px-3 py-2.5 font-normal text-heading outline-none focus:border-accent focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-70',
+    'w-full rounded-lg border border-line bg-surface px-3 py-2 font-normal text-heading outline-none focus:border-accent focus:ring-3 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-70',
   inputAuto:
     'w-auto rounded-lg border border-line bg-surface px-3 py-2.5 font-normal text-heading outline-none focus:border-accent focus:ring-3 focus:ring-accent/20',
   inputSmall:
