@@ -2,7 +2,7 @@
 // and turns error responses into an ApiError with a readable message.
 import { auth } from '../firebase'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://business-be-p3bx.onrender.com/api/v1'
 
 export class ApiError extends Error {
   status: number
