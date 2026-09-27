@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './AuthContext'
 import { GuestRoute, ProtectedRoute } from './ProtectedRoute'
-import { isFirebaseConfigured } from './firebase'
+import { isFirebaseConfigured, missingFirebaseSettings } from './firebase'
 import BusinessLayout from './components/BusinessLayout'
 import DashboardLayout from './components/DashboardLayout'
 import Login from './pages/Login'
@@ -29,9 +29,18 @@ function App() {
       <main className="grid min-h-screen place-items-center px-4 py-6">
         <div className={cx(ui.card, 'max-w-100 shadow-xl')}>
           <h1 className={ui.h1}>Almost there</h1>
-          <p className={ui.subtitle}>
-            Firebase isn&apos;t configured yet. Copy <code>.env.example</code> to <code>.env.local</code>, fill in your
-            Firebase web app keys, then restart <code>npm run dev</code>.
+          <p className={ui.subtitle}>Firebase isn&apos;t configured yet. These settings are missing:</p>
+          <ul className="my-3 list-disc pl-5 font-mono text-[0.85rem] text-heading">
+            {missingFirebaseSettings.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+          <p className={ui.hint}>
+            <strong>On your computer:</strong> copy <code>.env.example</code> to <code>.env.local</code>, fill them in, and
+            restart <code>npm run dev</code>.
+            <br />
+            <strong>On Vercel:</strong> add them under Settings → Environment Variables, then <strong>redeploy</strong>
+            (the values are built into the app, so old deployments never see them).
           </p>
         </div>
       </main>

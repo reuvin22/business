@@ -26,3 +26,6 @@ dist-ssr
 # Firebase service account keys (never commit or ship to the browser)
 my-business.json
 *-firebase-adminsdk-*.json
+
+.vercel
+.env*
