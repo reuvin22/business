@@ -14,11 +14,15 @@ export const endRelationship = (businessId: string, relationshipId: string) =>
   post<RelationshipView>(`/businesses/${businessId}/relationships/${relationshipId}/end`)
 
 // ---- Conversations ----
-export const listConversations = (businessId: string) => get<Conversation[]>(`/businesses/${businessId}/conversations`)
+// Messages are checked every few seconds, so they always skip the browser cache
+export const listConversations = (businessId: string) =>
+  get<Conversation[]>(`/businesses/${businessId}/conversations`, { fresh: true })
 export const startConversation = (businessId: string, body: { participantBusinessId: string; message: string }) =>
   post<Conversation>(`/businesses/${businessId}/conversations`, body)
 export const openConversation = (businessId: string, conversationId: string) =>
-  get<{ conversation: Conversation; messages: Message[] }>(`/businesses/${businessId}/conversations/${conversationId}`)
+  get<{ conversation: Conversation; messages: Message[] }>(`/businesses/${businessId}/conversations/${conversationId}`, {
+    fresh: true,
+  })
 export const sendMessage = (businessId: string, conversationId: string, message: string) =>
   post<Message>(`/businesses/${businessId}/conversations/${conversationId}/messages`, { message, attachments: [] })
 

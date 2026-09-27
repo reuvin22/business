@@ -48,10 +48,39 @@ async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> 
   return data as T
 }
 
-export const get = <T>(path: string) => api<T>(path)
-export const post = <T>(path: string, body?: unknown) => api<T>(path, 'POST', body ?? {})
-export const put = <T>(path: string, body: unknown) => api<T>(path, 'PUT', body)
-export const del = (path: string) => api<void>(path, 'DELETE')
+// ---- Short in-browser cache for GET requests ----------------------------------------------
+// Going back to a page you just saw shows it instantly, and two components asking for the
+// same thing at once share one request. Any change (POST/PUT/DELETE) forgets everything,
+// so you always see your own changes straight away.
+const BROWSER_CACHE_MS = 30_000
+const recent = new Map<string, { time: number; promise: Promise<unknown> }>()
+
+/** Forget all remembered responses (after a change, or when the user logs out). */
+export function clearApiCache() {
+  recent.clear()
+}
+
+/** GET a path. Pass { fresh: true } to skip the browser cache (e.g. for chat messages). */
+export function get<T>(path: string, options: { fresh?: boolean } = {}): Promise<T> {
+  const remembered = recent.get(path)
+  if (!options.fresh && remembered && Date.now() - remembered.time < BROWSER_CACHE_MS) {
+    return remembered.promise as Promise<T>
+  }
+  const promise = api<T>(path)
+  recent.set(path, { time: Date.now(), promise })
+  promise.catch(() => recent.delete(path)) // never remember a failure
+  return promise
+}
+
+/** Runs a change, then forgets remembered responses (they may be outdated now). */
+function change<T>(request: Promise<T>): Promise<T> {
+  clearApiCache()
+  return request.finally(clearApiCache)
+}
+
+export const post = <T>(path: string, body?: unknown) => change(api<T>(path, 'POST', body ?? {}))
+export const put = <T>(path: string, body: unknown) => change(api<T>(path, 'PUT', body))
+export const del = (path: string) => change(api<void>(path, 'DELETE'))
 
 /** Builds "?a=1&b=2" from an object, skipping empty values. */
 export function query(params: Record<string, string | boolean | undefined | null>) {

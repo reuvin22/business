@@ -4,6 +4,9 @@ import type { Business, BusinessIn, Member, MyRole } from './types'
 export const listMyBusinesses = () => get<Business[]>('/businesses')
 export const getBusiness = (businessId: string) => get<Business>(`/businesses/${businessId}`)
 export const getMyRole = (businessId: string) => get<MyRole>(`/businesses/${businessId}/my-role`)
+/** The business and your role in it, in one request. */
+export const getBusinessContext = (businessId: string) =>
+  get<{ business: Business; role: MyRole }>(`/businesses/${businessId}/context`)
 export const createBusiness = (body: BusinessIn) => post<Business>('/businesses', body)
 export const updateBusiness = (businessId: string, body: BusinessIn) => put<Business>(`/businesses/${businessId}`, body)
 export const deleteBusiness = (businessId: string) => del(`/businesses/${businessId}`)

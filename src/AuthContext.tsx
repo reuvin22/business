@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
+import { clearApiCache } from './api/client'
 import { auth } from './firebase'
 import { AuthContext, type AuthState } from './useAuth'
 
@@ -7,7 +8,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ user: null, loading: true })
 
   useEffect(
-    () => onAuthStateChanged(auth, (user) => setState({ user, loading: false })),
+    () =>
+      onAuthStateChanged(auth, (user) => {
+        clearApiCache() // another user must never see the previous user's data
+        setState({ user, loading: false })
+      }),
     [],
   )
 

@@ -12,6 +12,8 @@ export const updateProduct = (businessId: string, productId: string, body: unkno
 export const deleteProduct = (businessId: string, productId: string) => del(`${products(businessId)}/${productId}`)
 
 // ---- Variants ----
+/** Every variant of every product, in one request. */
+export const listAllVariants = (businessId: string) => get<Variant[]>(`/businesses/${businessId}/variants`)
 export const listVariants = (businessId: string, productId: string) =>
   get<Variant[]>(`${products(businessId)}/${productId}/variants`)
 export const createVariant = (businessId: string, productId: string, body: unknown) =>

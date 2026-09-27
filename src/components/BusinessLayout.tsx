@@ -1,5 +1,5 @@
 import { Link, Outlet, useParams } from 'react-router-dom'
-import { getBusiness, getMyRole } from '../api/businesses'
+import { getBusinessContext } from '../api/businesses'
 import type { BusinessContext } from '../businessContext'
 import { labelOf } from '../constants/options'
 import { useLoad } from '../hooks/useLoad'
@@ -20,10 +20,7 @@ import { ErrorBox, VerifiedBadge } from './ui'
 
 export default function BusinessLayout() {
   const { id = '' } = useParams()
-  const { data, error, reload } = useLoad(
-    () => Promise.all([getBusiness(id), getMyRole(id)]).then(([business, role]) => ({ business, role })),
-    [id],
-  )
+  const { data, error, reload } = useLoad(() => getBusinessContext(id), [id])
 
   if (!data) {
     return (
