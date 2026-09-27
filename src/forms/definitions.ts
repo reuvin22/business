@@ -233,57 +233,6 @@ export const productSections = (brandOptions: Option[], categoryOptions: Option[
   },
 ]
 
-export const variantSections: Section[] = [
-  {
-    title: 'Variant',
-    fields: [
-      { key: 'variantName', label: 'Variant name', required: true, placeholder: 'e.g. 1.5L' },
-      { key: 'sku', label: 'SKU' },
-      { key: 'barcode', label: 'Barcode' },
-      { key: 'unit', label: 'Unit (if different)', type: 'select', options: opt.UNITS },
-      { key: 'status', label: 'Status', type: 'select', options: opt.ACTIVE_STATUSES, required: true },
-      { key: 'weightKg', label: 'Weight (kg)', type: 'number' },
-      { key: 'lengthCm', label: 'Length (cm)', type: 'number' },
-      { key: 'widthCm', label: 'Width (cm)', type: 'number' },
-      { key: 'heightCm', label: 'Height (cm)', type: 'number' },
-    ],
-  },
-]
-export const newVariantValues = { status: 'ACTIVE' }
-
-export const priceSections = (variantOptions: Option[]): Section[] => [
-  {
-    title: 'Price tier',
-    hint: 'Example: 1–9 pcs = 120, 10–49 = 110, 50+ = 100. The lowest tier that fits an order is used.',
-    fields: [
-      { key: 'priceType', label: 'Price type', type: 'select', options: opt.PRICE_TYPES, required: true },
-      { key: 'price', label: 'Price per unit', type: 'number', required: true },
-      { key: 'minimumQuantity', label: 'From quantity', type: 'number', required: true },
-      { key: 'maximumQuantity', label: 'To quantity (empty = no limit)', type: 'number' },
-      {
-        key: 'variantId',
-        label: 'Variant',
-        type: 'select',
-        options: variantOptions,
-        emptyAsNull: true,
-        hint: 'Empty = applies to the whole product.',
-      },
-      {
-        key: 'customerType',
-        label: 'Only for buyers who are',
-        type: 'select',
-        options: opt.BUSINESS_TYPES,
-        emptyAsNull: true,
-        hint: 'Empty = every buyer.',
-      },
-      { key: 'effectiveFrom', label: 'Valid from', type: 'date' },
-      { key: 'effectiveUntil', label: 'Valid until', type: 'date' },
-      { key: 'status', label: 'Status', type: 'select', options: opt.ACTIVE_STATUSES, required: true },
-    ],
-  },
-]
-export const newPriceValues = { priceType: 'WHOLESALE', minimumQuantity: 1, status: 'ACTIVE' }
-
 export const customerPriceSections = (customerOptions: Option[], productOptions: Option[]): Section[] => [
   {
     title: 'Customer price',

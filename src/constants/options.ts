@@ -155,6 +155,15 @@ export const VISIBILITIES: Option[] = [
   { value: 'PRIVATE', label: 'Private — only your team' },
 ]
 export const PRICE_TYPES = options('RETAIL', 'WHOLESALE', 'DISTRIBUTOR', 'BULK', 'SPECIAL')
+export const STOCK_MOVEMENT_TYPES: Option[] = [
+  { value: 'STOCK_ADDED', label: 'Stock added' },
+  { value: 'ADJUSTMENT', label: 'Adjustment' },
+  { value: 'CORRECTION', label: 'Count correction' },
+  { value: 'SALE', label: 'Walk-in sale' },
+  { value: 'SALE_UNDONE', label: 'Sale undone' },
+  { value: 'ORDER_SHIPPED', label: 'Order shipped' },
+  { value: 'RECORD_REMOVED', label: 'Record removed' },
+]
 export const UNITS = ['pcs', 'box', 'case', 'pack', 'set', 'bottle', 'can', 'sack', 'kg', 'g', 'L', 'mL', 'm'].map(
   (u) => ({ value: u, label: u }),
 )

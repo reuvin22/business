@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import * as catalog from '../../api/catalog'
 import type { InventoryItem } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import FieldForm from '../../components/FieldForm'
+import StockHistoryTable from '../../components/StockHistoryTable'
 import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
 import * as forms from '../../forms/definitions'
 import { useLoad } from '../../hooks/useLoad'
@@ -14,6 +16,7 @@ import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'stock', label: 'Stock by location' },
+  { key: 'history', label: 'Stock history' },
   { key: 'sales', label: 'Walk-in sales' },
 ]
 
@@ -33,6 +36,8 @@ export default function InventoryPage() {
         <EmptyState text="Add a location first (Profile → Locations & hours). Stock is kept per location." />
       ) : tab === 'stock' ? (
         <StockTab data={stockData.data} />
+      ) : tab === 'history' ? (
+        <HistoryTab data={stockData.data} />
       ) : (
         <SalesTab data={stockData.data} />
       )}
@@ -116,7 +121,7 @@ function StockTab({ data }: { data: StockData }) {
                 <th className={cx(ui.th, ui.num)}>Available</th>
                 <th className={cx(ui.th, ui.num)}>Alert at</th>
                 <th className={ui.th}>Status</th>
-                {canEdit && <th className={ui.th} aria-label="Actions" />}
+                <th className={ui.th} aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -131,14 +136,19 @@ function StockTab({ data }: { data: StockData }) {
                   <td className={ui.td}>
                     <Badge value={item.stockStatus} />
                   </td>
-                  {canEdit && (
-                    <td className={cx(ui.td, ui.actions)}>
-                      <button type="button" className={ui.link} onClick={() => setAdjusting(item)}>
-                        Adjust
-                      </button>
-                      <ConfirmButton label="Delete" onConfirm={() => remove(item)} />
-                    </td>
-                  )}
+                  <td className={cx(ui.td, ui.actions)}>
+                    <Link to={`?tab=history&product=${item.productId}`} className={ui.link}>
+                      History
+                    </Link>
+                    {canEdit && (
+                      <>
+                        <button type="button" className={ui.link} onClick={() => setAdjusting(item)}>
+                          Adjust
+                        </button>
+                        <ConfirmButton label="Delete" onConfirm={() => remove(item)} />
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -296,6 +306,54 @@ function SalesTab({ data }: { data: StockData }) {
           </table>
         </div>
       )}
+    </section>
+  )
+}
+
+
+/** Every added and deducted quantity, with filters for product and location. */
+function HistoryTab({ data }: { data: StockData }) {
+  const { business } = useBusiness()
+  const [params, setParams] = useSearchParams()
+  const productId = params.get('product') ?? ''
+  const locationId = params.get('location') ?? ''
+  const { data: movements, error } = useLoad(
+    () => catalog.listStockMovements(business.id, { product_id: productId || undefined, location_id: locationId || undefined }),
+    [business.id, productId, locationId],
+  )
+
+  // Keep the filters in the URL, so "History" links and the back button work
+  const setFilter = (key: 'product' | 'location', value: string) =>
+    setParams((current) => {
+      const next = new URLSearchParams(current)
+      if (value) next.set(key, value)
+      else next.delete(key)
+      return next
+    })
+
+  return (
+    <section className={ui.section}>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <select className={ui.inputAuto} value={productId} onChange={(e) => setFilter('product', e.target.value)} aria-label="Product">
+          <option value="">All products</option>
+          {data.products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.productName}
+            </option>
+          ))}
+        </select>
+        <select className={ui.inputAuto} value={locationId} onChange={(e) => setFilter('location', e.target.value)} aria-label="Location">
+          <option value="">All locations</option>
+          {data.locations.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.locationName}
+            </option>
+          ))}
+        </select>
+        <span className={ui.hint}>Newest first. + is stock added, − is stock taken out.</span>
+      </div>
+      <ErrorBox message={error} />
+      {!movements ? <Loading /> : <StockHistoryTable movements={movements} />}
     </section>
   )
 }

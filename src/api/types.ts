@@ -237,6 +237,9 @@ export type CustomerPrice = Saved & {
   effectiveUntil: DateText | null
 }
 
+/** A product with its variants and price tiers (what the product form edits). */
+export type ProductFull = { product: Product; variants: Variant[]; prices: Price[] }
+
 // ---- Inventory & sales -----------------------------------------------------------------
 
 export type InventoryItem = Saved & {
@@ -248,6 +251,24 @@ export type InventoryItem = Saved & {
   reservedQuantity: number
   availableQuantity: number
   stockStatus: string
+}
+
+/** One change to a quantity on hand (a line in the stock history). */
+export type StockMovement = Saved & {
+  productId: string
+  variantId: string | null
+  locationId: string
+  productName: string
+  variantName: string
+  locationName: string
+  movementType: string
+  change: number
+  quantityAfter: number
+  note: string
+  referenceId: string
+  referenceLabel: string
+  byUid: string
+  byName: string
 }
 
 export type Sale = Saved & {

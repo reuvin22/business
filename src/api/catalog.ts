@@ -1,37 +1,24 @@
-import { del, get, post, put } from './client'
-import type { InventoryItem, Price, Product, Sale, Variant } from './types'
+import { del, get, post, put, query } from './client'
+import type { InventoryItem, Price, Product, ProductFull, Sale, StockMovement, Variant } from './types'
 
 const products = (businessId: string) => `/businesses/${businessId}/products`
 
 // ---- Products ----
 export const listProducts = (businessId: string) => get<Product[]>(products(businessId))
-export const getProduct = (businessId: string, productId: string) => get<Product>(`${products(businessId)}/${productId}`)
-export const createProduct = (businessId: string, body: unknown) => post<Product>(products(businessId), body)
-export const updateProduct = (businessId: string, productId: string, body: unknown) =>
-  put<Product>(`${products(businessId)}/${productId}`, body)
 export const deleteProduct = (businessId: string, productId: string) => del(`${products(businessId)}/${productId}`)
+
+// ---- The product form: product + variants + price tiers in one request ----
+export const getProductFull = (businessId: string, productId: string) =>
+  get<ProductFull>(`${products(businessId)}/${productId}/full`)
+export const createProductFull = (businessId: string, body: unknown) => post<ProductFull>(`${products(businessId)}/full`, body)
+export const updateProductFull = (businessId: string, productId: string, body: unknown) =>
+  put<ProductFull>(`${products(businessId)}/${productId}/full`, body)
+/** Every price tier of every product, in one request. */
+export const listAllPrices = (businessId: string) => get<Price[]>(`/businesses/${businessId}/prices`)
 
 // ---- Variants ----
 /** Every variant of every product, in one request. */
 export const listAllVariants = (businessId: string) => get<Variant[]>(`/businesses/${businessId}/variants`)
-export const listVariants = (businessId: string, productId: string) =>
-  get<Variant[]>(`${products(businessId)}/${productId}/variants`)
-export const createVariant = (businessId: string, productId: string, body: unknown) =>
-  post<Variant>(`${products(businessId)}/${productId}/variants`, body)
-export const updateVariant = (businessId: string, productId: string, variantId: string, body: unknown) =>
-  put<Variant>(`${products(businessId)}/${productId}/variants/${variantId}`, body)
-export const deleteVariant = (businessId: string, productId: string, variantId: string) =>
-  del(`${products(businessId)}/${productId}/variants/${variantId}`)
-
-// ---- Price tiers ----
-export const listPrices = (businessId: string, productId: string) =>
-  get<Price[]>(`${products(businessId)}/${productId}/prices`)
-export const createPrice = (businessId: string, productId: string, body: unknown) =>
-  post<Price>(`${products(businessId)}/${productId}/prices`, body)
-export const updatePrice = (businessId: string, productId: string, priceId: string, body: unknown) =>
-  put<Price>(`${products(businessId)}/${productId}/prices/${priceId}`, body)
-export const deletePrice = (businessId: string, productId: string, priceId: string) =>
-  del(`${products(businessId)}/${productId}/prices/${priceId}`)
 
 // ---- Inventory ----
 const inventory = (businessId: string) => `/businesses/${businessId}/inventory`
@@ -43,6 +30,10 @@ export const updateInventory = (businessId: string, inventoryId: string, body: {
 export const adjustInventory = (businessId: string, inventoryId: string, body: { change: number; note: string }) =>
   post<InventoryItem>(`${inventory(businessId)}/${inventoryId}/adjust`, body)
 export const deleteInventory = (businessId: string, inventoryId: string) => del(`${inventory(businessId)}/${inventoryId}`)
+
+// ---- Stock history ----
+export const listStockMovements = (businessId: string, filters: { product_id?: string; location_id?: string } = {}) =>
+  get<StockMovement[]>(`/businesses/${businessId}/stock-movements${query(filters)}`)
 
 // ---- Walk-in sales ----
 export const listSales = (businessId: string) => get<Sale[]>(`/businesses/${businessId}/sales`)
