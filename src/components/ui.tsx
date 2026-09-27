@@ -197,3 +197,30 @@ export function BusinessLogo({ name, src, small }: { name: string; src: string; 
   if (src) return <img src={src} alt="" className={cx(size, 'shrink-0 object-cover')} />
   return <span className={cx(size, 'grid shrink-0 place-items-center bg-chip font-extrabold text-accent')}>{initials(name)}</span>
 }
+
+const THUMB_SIZES = {
+  sm: 'size-10 rounded-md',
+  md: 'size-16 rounded-lg',
+  lg: 'aspect-square w-full max-w-80 rounded-xl',
+}
+
+/** A product's primary image, or a grey placeholder when it has none (images are optional). */
+export function ProductThumb({
+  images,
+  size = 'sm',
+}: {
+  images: { imageUrl: string; isPrimary: boolean }[]
+  size?: keyof typeof THUMB_SIZES
+}) {
+  const image = images.find((i) => i.isPrimary) ?? images[0]
+  if (image) return <img src={image.imageUrl} alt="" loading="lazy" className={cx(THUMB_SIZES[size], 'shrink-0 bg-chip object-cover')} />
+  return (
+    <span className={cx(THUMB_SIZES[size], 'grid shrink-0 place-items-center bg-chip text-muted')} aria-label="No image">
+      <svg width="40%" height="40%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="M21 15l-5-5L5 21" />
+      </svg>
+    </span>
+  )
+}

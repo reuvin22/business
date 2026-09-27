@@ -9,6 +9,7 @@ import { useBusiness } from '../../businessContext'
 import DetailsView, { DetailItem, DetailsCard } from '../../components/DetailsView'
 import FieldForm from '../../components/FieldForm'
 import { ImagesEditor, PairsEditor, type Pair } from '../../components/ListEditors'
+import ProductGallery from '../../components/ProductGallery'
 import ResourceSection from '../../components/ResourceSection'
 import { Badge, ConfirmButton, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
 import { labelOf } from '../../constants/options'
@@ -18,7 +19,7 @@ import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney, formatNumber } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
 import { formToProduct, productToForm } from './catalog/productForm'
-import { cx, ui } from '../../styles'
+import { ui } from '../../styles'
 
 const TABS = [
   { key: 'details', label: 'Details' },
@@ -187,7 +188,7 @@ function DetailsTab({ product, canEdit, onSaved }: { product: Product; canEdit: 
           onSaved()
         }}
       >
-        <ImagesEditor images={images} onChange={setImages} />
+        <ImagesEditor businessId={business.id} images={images} onChange={setImages} />
         <PairsEditor title="Specifications" pairs={specs} onChange={setSpecs} namePlaceholder="e.g. Shelf life" valuePlaceholder="e.g. 12 months" />
       </FieldForm>
     )
@@ -196,11 +197,7 @@ function DetailsTab({ product, canEdit, onSaved }: { product: Product; canEdit: 
   return (
     <>
       <div className={ui.sectionHead}>
-        <div className="flex flex-wrap gap-2">
-          {product.images.map((image) => (
-            <img key={image.imageUrl} src={image.imageUrl} alt="" className={cx('size-21 rounded-lg border-2 object-cover', image.isPrimary ? 'border-accent' : 'border-transparent')} />
-          ))}
-        </div>
+        <ProductGallery key={product.updatedAt} images={product.images} />
         {canEdit && (
           <button
             type="button"

@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createProduct, listProducts } from '../../api/catalog'
 import { listCategories, searchBusinesses } from '../../api/directory'
 import { brandsApi, customerPricesApi } from '../../api/resources'
-import type { Brand, CustomerPrice } from '../../api/types'
+import type { Brand, CustomerPrice, ProductImage } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import FieldForm from '../../components/FieldForm'
+import { ImagesEditor } from '../../components/ListEditors'
 import ResourceSection from '../../components/ResourceSection'
-import { Badge, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
+import { Badge, EmptyState, ErrorBox, Loading, PageHeader, ProductThumb, Tabs } from '../../components/ui'
 import { labelOf } from '../../constants/options'
 import * as forms from '../../forms/definitions'
 import { useLoad } from '../../hooks/useLoad'
@@ -62,6 +63,7 @@ function ProductsTab() {
   const { data: brands = [] } = useLoad(() => brandsApi.list(business.id), [business.id])
   const { data: categories = [] } = useLoad(listCategories, [])
   const [adding, setAdding] = useState(false)
+  const [newImages, setNewImages] = useState<ProductImage[]>([])
 
   const brandOptions = brands.map((b) => ({ value: b.id, label: b.brandName }))
   const canEdit = can('products.manage')
@@ -71,7 +73,14 @@ function ProductsTab() {
       <div className={ui.sectionHead}>
         <p className={ui.hint}>Click a product to manage its images, variants, and price tiers.</p>
         {canEdit && !adding && (
-          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
+          <button
+            type="button"
+            className={ui.btnPrimary}
+            onClick={() => {
+              setNewImages([])
+              setAdding(true)
+            }}
+          >
             + Add product
           </button>
         )}
@@ -85,10 +94,12 @@ function ProductsTab() {
           submitLabel="Add product"
           onCancel={() => setAdding(false)}
           onSubmit={async (values) => {
-            const product = await createProduct(business.id, formToProduct(values, newProductValues))
+            const product = await createProduct(business.id, { ...formToProduct(values, newProductValues), images: newImages })
             navigate(`/business/${business.id}/products/${product.id}?tab=prices`)
           }}
-        />
+        >
+          <ImagesEditor businessId={business.id} images={newImages} onChange={setNewImages} />
+        </FieldForm>
       )}
 
       <ErrorBox message={error} />
@@ -116,7 +127,7 @@ function ProductsTab() {
                 <tr key={p.id}>
                   <td className={cx(ui.td, ui.strong)}>
                     <Link to={`/business/${business.id}/products/${p.id}`} className={ui.rowLink}>
-                      {p.images[0] && <img src={p.images.find((i) => i.isPrimary)?.imageUrl ?? p.images[0].imageUrl} alt="" className={ui.thumb} />}
+                      <ProductThumb images={p.images} />
                       {p.productName}
                     </Link>
                   </td>

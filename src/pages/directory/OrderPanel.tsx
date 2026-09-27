@@ -4,7 +4,7 @@ import { placeOrder, quoteOrder } from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { Address, Business, Location, OrderIn, Price, PublicProduct, PublicProfile, Quote } from '../../api/types'
 import { FormSection } from '../../components/FieldForm'
-import { ErrorBox } from '../../components/ui'
+import { ErrorBox, ProductThumb } from '../../components/ui'
 import { FULFILLMENT_METHODS, labelOf } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney } from '../../utils/format'
@@ -149,12 +149,11 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
             {rows.map((row) => {
               const rules = row.product.orderRules
               const myPrice = row.product.customerPrices.find((cp) => cp.variantId === null || cp.variantId === row.variantId)
-              const image = row.product.images.find((i) => i.isPrimary) ?? row.product.images[0]
               return (
                 <tr key={row.key}>
                   <td className={cx(ui.td, ui.strong)}>
                     <span className={ui.rowLink}>
-                      {image && <img src={image.imageUrl} alt="" className={ui.thumb} />}
+                      <ProductThumb images={row.product.images} size="md" />
                       <span>
                         {row.name}
                         {row.product.description && <span className="block text-[0.82rem] whitespace-normal text-muted">{row.product.description}</span>}

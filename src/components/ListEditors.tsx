@@ -1,7 +1,11 @@
 // Editors for small lists inside a form: product images and name/value pairs.
+import { useState } from 'react'
+import { uploadImage } from '../api/uploads'
 import type { ProductImage } from '../api/types'
 import { cx, ui } from '../styles'
+import { shrinkImage } from '../utils/image'
 import { FormSection } from './FieldForm'
+import { ErrorBox } from './ui'
 
 export type Pair = { name: string; value: string }
 
@@ -44,41 +48,117 @@ export function PairsEditor({
   )
 }
 
-/** Image links with one primary image. */
-export function ImagesEditor({ images, onChange }: { images: ProductImage[]; onChange: (images: ProductImage[]) => void }) {
-  const update = (index: number, changes: Partial<ProductImage>) =>
-    onChange(images.map((image, i) => (i === index ? { ...image, ...changes } : image)))
+/** Product images: upload from your device (or paste a link). Optional; one is the primary image. */
+export function ImagesEditor({
+  businessId,
+  images,
+  onChange,
+}: {
+  businessId: string
+  images: ProductImage[]
+  onChange: (images: ProductImage[]) => void
+}) {
+  const [uploading, setUploading] = useState(0)
+  const [error, setError] = useState('')
+  const [link, setLink] = useState('')
+
+  const add = (imageUrl: string, list: ProductImage[]) => [
+    ...list,
+    { imageUrl, sortOrder: list.length, isPrimary: list.length === 0 },
+  ]
   const makePrimary = (index: number) => onChange(images.map((image, i) => ({ ...image, isPrimary: i === index })))
+  const remove = (index: number) => {
+    const rest = images.filter((_, i) => i !== index)
+    // Keep one primary image when the primary one is removed
+    if (rest.length && !rest.some((image) => image.isPrimary)) rest[0] = { ...rest[0], isPrimary: true }
+    onChange(rest)
+  }
+
+  async function handleFiles(files: File[]) {
+    if (!files.length) return
+    setError('')
+    setUploading(files.length)
+    let list = images
+    for (const file of files) {
+      try {
+        const { blob, name } = await shrinkImage(file)
+        list = add(await uploadImage(businessId, blob, name), list)
+        onChange(list)
+      } catch (err) {
+        setError(`${file.name}: ${(err as Error).message}`)
+      } finally {
+        setUploading((n) => n - 1)
+      }
+    }
+  }
 
   return (
-    <FormSection title="Images" hint="Paste image links (e.g. from Google Drive or your website). The primary image is shown first.">
-      <div className="flex flex-col items-start gap-2.5">
-        {images.map((image, i) => (
-          <div key={i} className={rowClass}>
-            {image.imageUrl ? <img src={image.imageUrl} alt="" className={ui.thumb} /> : <span className={ui.thumb} />}
-            <input
-              type="url"
-              className={cx(ui.input, 'flex-1')}
-              value={image.imageUrl}
-              onChange={(e) => update(i, { imageUrl: e.target.value })}
-              placeholder="https://…/photo.jpg"
-            />
-            <label className={ui.checkboxLabel}>
-              <input type="radio" className={ui.checkbox} name="primary-image" checked={image.isPrimary} onChange={() => makePrimary(i)} />
-              <span>Primary</span>
-            </label>
-            <button type="button" className={ui.linkDanger} onClick={() => onChange(images.filter((_, j) => j !== i))}>
-              Remove
-            </button>
+    <FormSection title="Images (optional)" hint="Upload photos from your device. The primary image is shown first in lists.">
+      <div className="flex flex-col gap-3">
+        {images.length > 0 && (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+            {images.map((image, i) => (
+              <figure key={image.imageUrl + i} className="m-0 flex flex-col gap-1.5">
+                <img
+                  src={image.imageUrl}
+                  alt=""
+                  className={cx(
+                    'aspect-square w-full rounded-lg border-2 bg-chip object-cover',
+                    image.isPrimary ? 'border-accent' : 'border-transparent',
+                  )}
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <label className={ui.checkboxLabel}>
+                    <input type="radio" className={ui.checkbox} name="primary-image" checked={image.isPrimary} onChange={() => makePrimary(i)} />
+                    <span>Primary</span>
+                  </label>
+                  <button type="button" className={ui.linkDanger} onClick={() => remove(i)}>
+                    Remove
+                  </button>
+                </div>
+              </figure>
+            ))}
           </div>
-        ))}
-        <button
-          type="button"
-          className={ui.link}
-          onClick={() => onChange([...images, { imageUrl: '', sortOrder: images.length, isPrimary: images.length === 0 }])}
-        >
-          + Add image
-        </button>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <label className={cx(ui.btnGhost, uploading > 0 && 'pointer-events-none opacity-60')}>
+            {uploading > 0 ? `Uploading ${uploading}…` : '+ Upload image'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(Array.from(e.target.files ?? [])) // copy the list before clearing the input
+                e.target.value = '' // lets you pick the same file again
+              }}
+            />
+          </label>
+          <span className={ui.hint}>JPG, PNG, WEBP, or GIF · up to 5 MB</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="url"
+            className={ui.rowInput}
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="…or paste an image link (https://…)"
+          />
+          <button
+            type="button"
+            className={ui.btnGhost}
+            disabled={!link.trim().startsWith('http')}
+            onClick={() => {
+              onChange(add(link.trim(), images))
+              setLink('')
+            }}
+          >
+            Add link
+          </button>
+        </div>
+        <ErrorBox message={error} />
       </div>
     </FormSection>
   )

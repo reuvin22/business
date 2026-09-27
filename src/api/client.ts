@@ -82,6 +82,22 @@ export const post = <T>(path: string, body?: unknown) => change(api<T>(path, 'PO
 export const put = <T>(path: string, body: unknown) => change(api<T>(path, 'PUT', body))
 export const del = (path: string) => change(api<void>(path, 'DELETE'))
 
+/** Sends a file as form data (field name "file"), e.g. an image upload. */
+export async function upload<T>(path: string, file: Blob, fileName: string): Promise<T> {
+  const token = await auth.currentUser?.getIdToken()
+  const form = new FormData()
+  form.append('file', file, fileName)
+  // No Content-Type header: the browser sets it (with the form boundary) for FormData
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new ApiError(response.status, readErrorMessage(data, response.statusText))
+  return data as T
+}
+
 /** Builds "?a=1&b=2" from an object, skipping empty values. */
 export function query(params: Record<string, string | boolean | undefined | null>) {
   const search = new URLSearchParams()
