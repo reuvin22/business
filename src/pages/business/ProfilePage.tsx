@@ -18,6 +18,7 @@ import { formatDate } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
 import LocationsTab from './profile/LocationsTab'
 import VerificationTab from './profile/VerificationTab'
+import { ui } from '../../styles'
 
 const TABS = [
   { key: 'identity', label: 'Business info' },
@@ -36,7 +37,7 @@ export default function ProfilePage() {
   const canEdit = can('business.edit')
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Business profile" subtitle="Everything other businesses and the platform know about you." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
@@ -151,15 +152,15 @@ function IdentityTab() {
 
   return (
     <>
-      <div className="section-head">
-        <div className="identity-summary">
-          {business.coverImage && <img src={business.coverImage} alt="" className="cover-image" />}
-          <p className="hint">
+      <div className={ui.sectionHead}>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          {business.coverImage && <img src={business.coverImage} alt="" className="max-h-45 w-full rounded-[10px] object-cover" />}
+          <p className={ui.hint}>
             Status <Badge value={business.businessStatus} /> · Verification <Badge value={business.verificationStatus} />
           </p>
         </div>
         {can('business.edit') && (
-          <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>
+          <button type="button" className={ui.btnGhost} onClick={() => setEditing(true)}>
             Edit business info
           </button>
         )}
@@ -167,11 +168,11 @@ function IdentityTab() {
       <DetailsView sections={sections} values={business} />
 
       {role.role === 'OWNER' && (
-        <section className="card details-card danger-zone">
-          <h3>Danger zone</h3>
+        <section className={ui.dangerZone}>
+          <h3 className={ui.dangerTitle}>Danger zone</h3>
           <ErrorBox message={deleteError} />
-          <div className="form-actions">
-            <span className="confirm-text">
+          <div className={ui.formActions}>
+            <span className={ui.confirmText}>
               Deleting removes this business and all its products, stock, and settings. Orders and messages with other
               businesses are kept for them.
             </span>

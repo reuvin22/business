@@ -8,6 +8,7 @@ import { labelOf, MEMBER_ROLES, MEMBER_STATUSES, PERMISSIONS, ROLE_PERMISSIONS }
 import { useLoad } from '../../hooks/useLoad'
 import { useAuth } from '../../useAuth'
 import { formatDateTime } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 export default function TeamPage() {
   const { business, role, can } = useBusiness()
@@ -30,7 +31,7 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Team" subtitle="People who can work on this business, and what each of them may change." />
 
       {canManage && <AddMemberForm onAdded={reload} />}
@@ -49,16 +50,16 @@ export default function TeamPage() {
       {!members ? (
         <Loading />
       ) : (
-        <div className="table-wrap card">
-          <table className="table">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
             <thead>
               <tr>
-                <th>Member</th>
-                <th>Role</th>
-                <th>Can change</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th aria-label="Actions" />
+                <th className={ui.th}>Member</th>
+                <th className={ui.th}>Role</th>
+                <th className={ui.th}>Can change</th>
+                <th className={ui.th}>Status</th>
+                <th className={ui.th}>Joined</th>
+                <th className={ui.th} aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -67,22 +68,22 @@ export default function TeamPage() {
                 const isOwner = m.role === 'OWNER'
                 return (
                   <tr key={m.id}>
-                    <td className="strong">
+                    <td className={cx(ui.td, ui.strong)}>
                       {m.displayName || m.email}
                       {isMe && ' (you)'}
-                      <div className="muted small">{m.email}</div>
+                      <div className="text-[0.82rem] text-muted">{m.email}</div>
                     </td>
-                    <td>{labelOf(m.role)}</td>
-                    <td className="wrap small">
+                    <td className={ui.td}>{labelOf(m.role)}</td>
+                    <td className={cx(ui.td, ui.wrap, ui.small)}>
                       {isOwner ? 'Everything' : m.permissions.map((p) => PERMISSIONS.find((o) => o.value === p)?.label ?? p).join(', ') || 'View only'}
                     </td>
-                    <td>
+                    <td className={ui.td}>
                       <Badge value={m.status} />
                     </td>
-                    <td>{formatDateTime(m.joinedAt)}</td>
-                    <td className="actions">
+                    <td className={ui.td}>{formatDateTime(m.joinedAt)}</td>
+                    <td className={cx(ui.td, ui.actions)}>
                       {canManage && !isOwner && !isMe && (
-                        <button type="button" className="link" onClick={() => setEditing(m)}>
+                        <button type="button" className={ui.link} onClick={() => setEditing(m)}>
                           Edit
                         </button>
                       )}
@@ -97,7 +98,7 @@ export default function TeamPage() {
           </table>
         </div>
       )}
-      {role.role === 'OWNER' && <p className="hint">You are the owner. Owners cannot leave the business; they can only delete it (Profile → Business info).</p>}
+      {role.role === 'OWNER' && <p className={ui.hint}>You are the owner. Owners cannot leave the business; they can only delete it (Profile → Business info).</p>}
     </div>
   )
 }
@@ -124,17 +125,17 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
   }
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit}>
-      <h2>Add a team member</h2>
-      <p className="hint">They need to have signed up already. They get the default permissions for their role; you can change them after.</p>
-      <div className="form-grid">
-        <label>
+    <form className={ui.formCard} onSubmit={handleSubmit}>
+      <h2 className={ui.h2}>Add a team member</h2>
+      <p className={ui.hint}>They need to have signed up already. They get the default permissions for their role; you can change them after.</p>
+      <div className={ui.formGrid}>
+        <label className={ui.label}>
           Email *
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@email.com" />
+          <input className={ui.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@email.com" />
         </label>
-        <label>
+        <label className={ui.label}>
           Role *
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <select className={ui.input} value={role} onChange={(e) => setRole(e.target.value)}>
             {MEMBER_ROLES.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
@@ -143,10 +144,10 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
           </select>
         </label>
       </div>
-      {message && <p className="alert alert-info">{message}</p>}
+      {message && <p className={ui.alertInfo}>{message}</p>}
       <ErrorBox message={error} />
-      <div className="form-actions">
-        <button type="submit" className="btn btn-primary btn-auto" disabled={!email.trim()}>
+      <div className={ui.formActions}>
+        <button type="submit" className={ui.btnPrimary} disabled={!email.trim()}>
           Add member
         </button>
       </div>
@@ -175,12 +176,12 @@ function EditMemberForm({ member, onDone }: { member: Member; onDone: () => void
   }
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit}>
-      <h2>Edit {member.displayName || member.email}</h2>
-      <div className="form-grid">
-        <label>
+    <form className={ui.formCard} onSubmit={handleSubmit}>
+      <h2 className={ui.h2}>Edit {member.displayName || member.email}</h2>
+      <div className={ui.formGrid}>
+        <label className={ui.label}>
           Role
-          <select
+          <select className={ui.input}
             value={role}
             onChange={(e) => {
               setRole(e.target.value)
@@ -194,9 +195,9 @@ function EditMemberForm({ member, onDone }: { member: Member; onDone: () => void
             ))}
           </select>
         </label>
-        <label>
+        <label className={ui.label}>
           Status
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select className={ui.input} value={status} onChange={(e) => setStatus(e.target.value)}>
             {MEMBER_STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
@@ -205,23 +206,23 @@ function EditMemberForm({ member, onDone }: { member: Member; onDone: () => void
           </select>
         </label>
       </div>
-      <div className="field-group">
-        <span className="field-label">Permissions (changing the role resets these to its defaults)</span>
-        <div className="check-grid">
+      <div className="flex flex-col gap-2">
+        <span className="text-[0.88rem] font-semibold text-heading">Permissions (changing the role resets these to its defaults)</span>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-x-4 gap-y-2">
           {PERMISSIONS.map((p) => (
-            <label key={p.value} className="checkbox-label">
-              <input type="checkbox" checked={permissions.includes(p.value)} onChange={() => togglePermission(p.value)} />
+            <label key={p.value} className={ui.checkboxLabel}>
+              <input type="checkbox" className={ui.checkbox} checked={permissions.includes(p.value)} onChange={() => togglePermission(p.value)} />
               <span>{p.label}</span>
             </label>
           ))}
         </div>
       </div>
       <ErrorBox message={error} />
-      <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onDone}>
+      <div className={ui.formActions}>
+        <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary btn-auto">
+        <button type="submit" className={ui.btnPrimary}>
           Save changes
         </button>
       </div>

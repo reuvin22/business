@@ -42,6 +42,17 @@ src/
 └── businessContext.ts    # useBusiness(): the current business, your role, can('permission')
 ```
 
+## Styling (Tailwind CSS)
+
+All styling is Tailwind classes in the components — there are no hand-written CSS rules.
+
+- `src/tailwind.css` loads Tailwind and defines the design tokens (colors, font) plus their dark-mode values.
+  Tokens become classes: `--color-heading` → `text-heading`, `--color-line` → `border-line`, `--color-surface` → `bg-surface`.
+- `src/styles.ts` holds the class lists many components share (`ui.btnPrimary`, `ui.input`, `ui.card`, `ui.formCard`, table cells, …). Change a look there and it changes everywhere.
+- Use `cx()` to add or override classes: `cx(ui.card, 'p-0')`. It uses `tailwind-merge`, so the later class wins when two set the same thing.
+- Tables: use `<Table>`, `<Th>`, `<Td num strong actions>` from `components/ui.tsx`.
+- Install the "Tailwind CSS IntelliSense" VS Code extension for autocomplete of these classes.
+
 ## How the pieces fit
 
 - **Business pages** get the current business from `useBusiness()`. Use `can('products.manage')` to show or hide edit buttons; the backend checks the same permission anyway.

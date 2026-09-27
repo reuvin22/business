@@ -3,6 +3,7 @@ import type { SingleResource } from '../api/resources'
 import type { Saved } from '../api/types'
 import type { Section } from '../forms/fields'
 import { useLoad } from '../hooks/useLoad'
+import { ui } from '../styles'
 import DetailsView from './DetailsView'
 import FieldForm from './FieldForm'
 import { ErrorBox, Loading } from './ui'
@@ -34,14 +35,14 @@ export default function SettingsForm<T extends Saved>({
   if (!data) return <ErrorBox message={error} />
 
   return (
-    <section className="resource-section">
-      <div className="section-head">
+    <section className={ui.section}>
+      <div className={ui.sectionHead}>
         <div>
-          <h2>{title}</h2>
-          {description && <p className="hint">{description}</p>}
+          <h2 className={ui.h2}>{title}</h2>
+          {description && <p className={ui.hint}>{description}</p>}
         </div>
         {canEdit && !editing && (
-          <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>
+          <button type="button" className={ui.btnGhost} onClick={() => setEditing(true)}>
             Edit
           </button>
         )}

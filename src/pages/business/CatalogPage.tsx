@@ -15,6 +15,7 @@ import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney } from '../../utils/format'
 import { categoryName, categoryOptions } from '../../utils/options'
 import { formToProduct, newProductValues } from './catalog/productForm'
+import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'products', label: 'Products' },
@@ -27,7 +28,7 @@ export default function CatalogPage() {
   const [tab, setTab] = useTab(TABS)
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Products" subtitle={`Everything ${business.businessName} sells.`} />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
@@ -44,7 +45,7 @@ export default function CatalogPage() {
           addLabel="+ Add brand"
           columns={[
             { label: 'Brand', render: (b) => <strong>{b.brandName}</strong> },
-            { label: 'Description', render: (b) => <span className="wrap">{b.description || '—'}</span> },
+            { label: 'Description', render: (b) => <span className="block max-w-90 whitespace-normal">{b.description || '—'}</span> },
             { label: 'Status', render: (b) => <Badge value={b.status} /> },
           ]}
         />
@@ -66,11 +67,11 @@ function ProductsTab() {
   const canEdit = can('products.manage')
 
   return (
-    <section className="resource-section">
-      <div className="section-head">
-        <p className="hint">Click a product to manage its images, variants, and price tiers.</p>
+    <section className={ui.section}>
+      <div className={ui.sectionHead}>
+        <p className={ui.hint}>Click a product to manage its images, variants, and price tiers.</p>
         {canEdit && !adding && (
-          <button type="button" className="btn btn-primary btn-auto" onClick={() => setAdding(true)}>
+          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Add product
           </button>
         )}
@@ -96,36 +97,36 @@ function ProductsTab() {
       ) : !products?.length ? (
         !adding && <EmptyState text="No products yet." />
       ) : (
-        <div className="table-wrap card">
-          <table className="table">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
             <thead>
               <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Brand</th>
-                <th>Unit</th>
-                <th className="num">MOQ</th>
-                <th>Visibility</th>
-                <th>Status</th>
+                <th className={ui.th}>Product</th>
+                <th className={ui.th}>SKU</th>
+                <th className={ui.th}>Category</th>
+                <th className={ui.th}>Brand</th>
+                <th className={ui.th}>Unit</th>
+                <th className={cx(ui.th, ui.num)}>MOQ</th>
+                <th className={ui.th}>Visibility</th>
+                <th className={ui.th}>Status</th>
               </tr>
             </thead>
             <tbody>
               {products.map((p) => (
                 <tr key={p.id}>
-                  <td className="strong">
-                    <Link to={`/business/${business.id}/products/${p.id}`} className="row-link">
-                      {p.images[0] && <img src={p.images.find((i) => i.isPrimary)?.imageUrl ?? p.images[0].imageUrl} alt="" className="thumb" />}
+                  <td className={cx(ui.td, ui.strong)}>
+                    <Link to={`/business/${business.id}/products/${p.id}`} className={ui.rowLink}>
+                      {p.images[0] && <img src={p.images.find((i) => i.isPrimary)?.imageUrl ?? p.images[0].imageUrl} alt="" className={ui.thumb} />}
                       {p.productName}
                     </Link>
                   </td>
-                  <td>{p.sku || '—'}</td>
-                  <td>{categoryName(categories, p.categoryId) || '—'}</td>
-                  <td>{brands.find((b) => b.id === p.brandId)?.brandName ?? '—'}</td>
-                  <td>{p.unit}</td>
-                  <td className="num">{p.orderRules.minimumOrderQuantity}</td>
-                  <td>{labelOf(p.visibility)}</td>
-                  <td>
+                  <td className={ui.td}>{p.sku || '—'}</td>
+                  <td className={ui.td}>{categoryName(categories, p.categoryId) || '—'}</td>
+                  <td className={ui.td}>{brands.find((b) => b.id === p.brandId)?.brandName ?? '—'}</td>
+                  <td className={ui.td}>{p.unit}</td>
+                  <td className={cx(ui.td, ui.num)}>{p.orderRules.minimumOrderQuantity}</td>
+                  <td className={ui.td}>{labelOf(p.visibility)}</td>
+                  <td className={ui.td}>
                     <Badge value={p.status} />
                   </td>
                 </tr>
@@ -161,8 +162,8 @@ function CustomerPricesTab() {
       columns={[
         { label: 'Customer', render: (c) => <strong>{c.customerBusinessName}</strong> },
         { label: 'Product', render: (c) => products.find((p) => p.id === c.productId)?.productName ?? 'Deleted product' },
-        { label: 'Price', className: 'num', render: (c) => formatMoney(c.price, business.currency) },
-        { label: 'From qty', className: 'num', render: (c) => c.minimumQuantity },
+        { label: 'Price', num: true, render: (c) => formatMoney(c.price, business.currency) },
+        { label: 'From qty', num: true, render: (c) => c.minimumQuantity },
         {
           label: 'Valid',
           render: (c) =>

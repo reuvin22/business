@@ -1,0 +1,74 @@
+/* Tailwind entry point. There are no hand-written styles in this app:
+   everything is Tailwind classes in the components (shared ones live in src/styles.ts).
+   This file only loads Tailwind and defines the design tokens (colors and font),
+   which become classes like bg-surface, text-heading, border-line. */
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Manrope', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --color-page: #f3f3f1; /* page background */
+  --color-surface: #fff; /* cards, inputs */
+  --color-body: #5c5c58; /* normal text */
+  --color-heading: #1d1d1b; /* headings, strong text */
+  --color-muted: #9b9b95;
+  --color-line: #e9e9e5; /* borders */
+  --color-chip: #f1f1ee; /* small grey backgrounds */
+  --color-accent: #2f6b5a;
+  --color-danger: #c2413b;
+  --color-danger-soft: #fdecec;
+  --color-info: #2e7d5f;
+  --color-info-soft: #e8f4ee;
+  --color-warn: #a8620b;
+  --color-warn-soft: #fdf4e3;
+
+  /* Sidebar (dark in both themes) */
+  --color-side: #2b2b2a;
+  --color-side-hover: #353533;
+  --color-side-active: #3b3b39;
+  --color-side-text: #b4b4ad;
+  --color-side-heading: #f5f5f2;
+  --color-lime: #dcf25a;
+  --color-lime-light: #eaff7a;
+  --color-ink: #1d1d1b; /* dark text that stays dark in both themes (e.g. on lime) */
+  --color-star: #e0a526;
+
+  /* Charts */
+  --color-up: #2e8b6a;
+  --color-down: #d0514a;
+  --color-bar: #2f6b5a;
+  --color-bar-stripe: #4f8e7a;
+  --color-chart-line: #9476b3;
+  --color-track: #f2f2ef;
+  --color-grid: #ededea;
+}
+
+/* Dark mode: the same tokens with dark values (follows the device setting) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: #141413;
+    --color-surface: #1e1e1d;
+    --color-body: #b9b9b2;
+    --color-heading: #f3f3ef;
+    --color-muted: #85857f;
+    --color-line: #2e2e2c;
+    --color-chip: #2a2a28;
+    --color-accent: #5fb597;
+    --color-danger: #f08a84;
+    --color-danger-soft: #3a1614;
+    --color-info: #6fcfa6;
+    --color-info-soft: #13291f;
+    --color-warn: #f2b54a;
+    --color-warn-soft: #33260f;
+    --color-side: #1a1a19;
+    --color-side-hover: #262625;
+    --color-side-active: #2c2c2a;
+    --color-up: #4fc596;
+    --color-down: #f0766f;
+    --color-bar: #3f8b73;
+    --color-bar-stripe: #5ea58e;
+    --color-chart-line: #b598d4;
+    --color-track: #262625;
+    --color-grid: #2a2a28;
+  }
+}

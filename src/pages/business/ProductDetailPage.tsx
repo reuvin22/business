@@ -6,7 +6,7 @@ import type { ListResource } from '../../api/resources'
 import { brandsApi } from '../../api/resources'
 import type { Price, Product, ProductImage, Variant } from '../../api/types'
 import { useBusiness } from '../../businessContext'
-import DetailsView from '../../components/DetailsView'
+import DetailsView, { DetailItem, DetailsCard } from '../../components/DetailsView'
 import FieldForm from '../../components/FieldForm'
 import { ImagesEditor, PairsEditor, type Pair } from '../../components/ListEditors'
 import ResourceSection from '../../components/ResourceSection'
@@ -18,6 +18,7 @@ import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney, formatNumber } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
 import { formToProduct, productToForm } from './catalog/productForm'
+import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'details', label: 'Details' },
@@ -36,14 +37,14 @@ export default function ProductDetailPage() {
 
   const canEdit = can('products.manage')
   const backLink = (
-    <Link to={`/business/${business.id}/products`} className="back-link">
+    <Link to={`/business/${business.id}/products`} className={ui.backLink}>
       ← All products
     </Link>
   )
 
   if (!product.data) {
     return (
-      <div className="page">
+      <div className={ui.page}>
         {backLink}
         {product.error ? <ErrorBox message={product.error} /> : <Loading />}
       </div>
@@ -67,7 +68,7 @@ export default function ProductDetailPage() {
   const variantName = (id: string | null) => (id ? (variants.data ?? []).find((v) => v.id === id)?.variantName ?? '?' : 'All')
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       {backLink}
       <PageHeader
         title={product.data.productName}
@@ -117,7 +118,7 @@ export default function ProductDetailPage() {
           emptyText="No prices yet. Buyers cannot order this product until it has a price."
           columns={[
             { label: 'Type', render: (p) => labelOf(p.priceType) },
-            { label: 'Price', className: 'num', render: (p) => <strong>{formatMoney(p.price, p.currency)}</strong> },
+            { label: 'Price', num: true, render: (p) => <strong>{formatMoney(p.price, p.currency)}</strong> },
             { label: 'Quantity', render: (p) => `${p.minimumQuantity}${p.maximumQuantity ? `–${p.maximumQuantity}` : '+'}` },
             { label: 'Variant', render: (p) => variantName(p.variantId) },
             { label: 'For', render: (p) => (p.customerType ? labelOf(p.customerType) : 'Everyone') },
@@ -132,11 +133,11 @@ export default function ProductDetailPage() {
       )}
 
       {canEdit && tab === 'details' && (
-        <section className="card details-card danger-zone">
-          <h3>Delete product</h3>
+        <section className={ui.dangerZone}>
+          <h3 className={ui.dangerTitle}>Delete product</h3>
           <ErrorBox message={deleteError} />
-          <div className="form-actions">
-            <span className="confirm-text">Also deletes its variants, prices, and stock records. Past orders keep their copy.</span>
+          <div className={ui.formActions}>
+            <span className={ui.confirmText}>Also deletes its variants, prices, and stock records. Past orders keep their copy.</span>
             <ConfirmButton
               label="Delete product"
               confirmLabel="Yes, delete"
@@ -194,16 +195,16 @@ function DetailsTab({ product, canEdit, onSaved }: { product: Product; canEdit: 
 
   return (
     <>
-      <div className="section-head">
-        <div className="image-strip">
+      <div className={ui.sectionHead}>
+        <div className="flex flex-wrap gap-2">
           {product.images.map((image) => (
-            <img key={image.imageUrl} src={image.imageUrl} alt="" className={image.isPrimary ? 'primary' : undefined} />
+            <img key={image.imageUrl} src={image.imageUrl} alt="" className={cx('size-21 rounded-lg border-2 object-cover', image.isPrimary ? 'border-accent' : 'border-transparent')} />
           ))}
         </div>
         {canEdit && (
           <button
             type="button"
-            className="btn btn-ghost"
+            className={ui.btnGhost}
             onClick={() => {
               setImages(product.images)
               setSpecs(product.specifications)
@@ -216,17 +217,13 @@ function DetailsTab({ product, canEdit, onSaved }: { product: Product; canEdit: 
       </div>
       <DetailsView sections={sections} values={productToForm(product)} />
       {product.specifications.length > 0 && (
-        <section className="card details-card">
-          <h3>Specifications</h3>
-          <dl className="details">
-            {product.specifications.map((spec) => (
-              <div key={spec.name}>
-                <dt>{spec.name}</dt>
-                <dd>{spec.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        <DetailsCard title="Specifications">
+          {product.specifications.map((spec) => (
+            <DetailItem key={spec.name} label={spec.name}>
+              {spec.value}
+            </DetailItem>
+          ))}
+        </DetailsCard>
       )}
     </>
   )

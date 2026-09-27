@@ -29,6 +29,10 @@ const fmtTick = (n: number) =>
 
 const PAD = { top: 12, right: 8, bottom: 28, left: 40 }
 
+// The hover tooltip, placed above the point it describes
+const TIP_CLASS =
+  'pointer-events-none absolute z-5 flex -translate-x-1/2 -translate-y-[calc(100%+12px)] flex-col items-center gap-0.5 whitespace-nowrap rounded-md border border-line bg-surface px-3.5 py-2 shadow-lg [&>span]:text-[0.72rem] [&>span]:text-muted [&>strong]:text-[0.9rem] [&>strong]:text-heading [&>strong]:tabular-nums'
+
 export function SegmentedToggle<T extends string>({
   options,
   value,
@@ -39,14 +43,14 @@ export function SegmentedToggle<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="segmented" role="tablist">
+    <div className="inline-flex rounded-md bg-chip p-0.75" role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           role="tab"
           aria-selected={value === o.value}
-          className={value === o.value ? 'active' : undefined}
+          className={`cursor-pointer rounded-[5px] border-0 px-3.5 py-1.25 text-[0.78rem] font-medium ${value === o.value ? 'bg-side text-white' : 'bg-transparent text-muted hover:text-heading'}`}
           onClick={() => onChange(o.value)}
         >
           {o.label}
@@ -80,19 +84,19 @@ export function ColumnChart({
   const y = (v: number) => PAD.top + plotH - (v / top) * plotH
 
   return (
-    <div className="chart" ref={ref} style={{ height }} onMouseLeave={() => setHover(null)}>
+    <div className="relative w-full [&>svg]:block [&>svg]:overflow-visible" ref={ref} style={{ height }} onMouseLeave={() => setHover(null)}>
       {width > 0 && (
         <svg width={width} height={height} role="img" aria-label={data.map((d) => `${d.tipLabel}: ${format(d.value)}`).join(', ')}>
           <defs>
             <pattern id={patternId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="6" height="6" fill="var(--bar)" />
-              <rect width="2.5" height="6" fill="var(--bar-stripe)" />
+              <rect width="6" height="6" fill="var(--color-bar)" />
+              <rect width="2.5" height="6" fill="var(--color-bar-stripe)" />
             </pattern>
           </defs>
           {ticks.map((t) => (
             <g key={t}>
-              <line className="grid-line" x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} />
-              <text className="axis-text" x={PAD.left - 10} y={y(t)} dy="0.32em" textAnchor="end">
+              <line className="stroke-grid" x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} />
+              <text className="fill-muted font-sans text-[11px]" x={PAD.left - 10} y={y(t)} dy="0.32em" textAnchor="end">
                 {fmtTick(t)}
               </text>
             </g>
@@ -102,13 +106,13 @@ export function ColumnChart({
             const h = (d.value / top) * plotH
             return (
               <g key={i} onMouseEnter={() => setHover(i)}>
-                <rect className="col-hit" x={cx - slot / 2} y={PAD.top} width={slot} height={plotH} />
-                <rect className="col-track" x={cx - barW / 2} y={PAD.top} width={barW} height={plotH} rx={2} />
+                <rect className="fill-transparent" x={cx - slot / 2} y={PAD.top} width={slot} height={plotH} />
+                <rect className="fill-track" x={cx - barW / 2} y={PAD.top} width={barW} height={plotH} rx={2} />
                 {d.value > 0 && (
                   <rect x={cx - barW / 2} y={y(d.value)} width={barW} height={h} fill={`url(#${patternId})`} rx={2} />
                 )}
                 {i % labelEvery === 0 && (
-                  <text className="axis-text" x={cx} y={height - 8} textAnchor="middle">
+                  <text className="fill-muted font-sans text-[11px]" x={cx} y={height - 8} textAnchor="middle">
                     {d.label}
                   </text>
                 )}
@@ -119,7 +123,7 @@ export function ColumnChart({
       )}
       {hover !== null && data[hover] && (
         <div
-          className="chart-tip"
+          className={TIP_CLASS}
           style={{ left: PAD.left + slot * hover + slot / 2, top: y(data[hover].value) }}
         >
           <span>{data[hover].tipLabel}</span>
@@ -200,36 +204,36 @@ export function AreaChart({
   }
 
   return (
-    <div className="chart" ref={ref} style={{ height }} onMouseLeave={() => setHover(null)}>
+    <div className="relative w-full [&>svg]:block [&>svg]:overflow-visible" ref={ref} style={{ height }} onMouseLeave={() => setHover(null)}>
       {width > 0 && (
         <svg width={width} height={height} role="img" aria-label={data.map((d) => `${d.tipLabel}: ${format(d.value)}`).join(', ')}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--line)" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="var(--line)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--color-chart-line)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="var(--color-chart-line)" stopOpacity="0" />
             </linearGradient>
           </defs>
           {ticks.map((t) => (
             <g key={t}>
-              <line className="grid-line" x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} />
-              <text className="axis-text" x={PAD.left - 10} y={y(t)} dy="0.32em" textAnchor="end">
+              <line className="stroke-grid" x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} />
+              <text className="fill-muted font-sans text-[11px]" x={PAD.left - 10} y={y(t)} dy="0.32em" textAnchor="end">
                 {fmtTick(t)}
               </text>
             </g>
           ))}
           {data.map((d, i) =>
             i % labelEvery === 0 ? (
-              <text key={i} className="axis-text" x={x(i)} y={height - 8} textAnchor="middle">
+              <text key={i} className="fill-muted font-sans text-[11px]" x={x(i)} y={height - 8} textAnchor="middle">
                 {d.label}
               </text>
             ) : null,
           )}
           <path d={area} fill={`url(#${gradientId})`} />
-          <path d={line} fill="none" stroke="var(--line)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          <path d={line} fill="none" stroke="var(--color-chart-line)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           {hover !== null && pts[hover] && (
             <>
-              <line className="hover-line" x1={pts[hover][0]} x2={pts[hover][0]} y1={PAD.top} y2={PAD.top + plotH} />
-              <circle cx={pts[hover][0]} cy={pts[hover][1]} r={5} className="hover-dot" />
+              <line className="stroke-grid" x1={pts[hover][0]} x2={pts[hover][0]} y1={PAD.top} y2={PAD.top + plotH} />
+              <circle cx={pts[hover][0]} cy={pts[hover][1]} r={5} className="fill-surface stroke-chart-line stroke-[2.5]" />
             </>
           )}
           <rect
@@ -243,7 +247,7 @@ export function AreaChart({
         </svg>
       )}
       {hover !== null && data[hover] && (
-        <div className="chart-tip" style={{ left: pts[hover][0], top: pts[hover][1] }}>
+        <div className={TIP_CLASS} style={{ left: pts[hover][0], top: pts[hover][1] }}>
           <span>{data[hover].tipLabel}</span>
           <strong>{format(data[hover].value)}</strong>
         </div>

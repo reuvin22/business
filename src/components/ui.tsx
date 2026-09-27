@@ -2,30 +2,32 @@
 import { useState, type ReactNode } from 'react'
 import { labelOf } from '../constants/options'
 import type { Tab } from '../hooks/useTab'
+import { cx, ui } from '../styles'
+import { initials } from '../utils/format'
 
 export function Loading({ text = 'Loading…' }: { text?: string }) {
-  return <p className="loading">{text}</p>
+  return <p className="py-4 text-muted">{text}</p>
 }
 
 export function ErrorBox({ message }: { message: string }) {
-  return message ? <p className="alert alert-error pre-line">{message}</p> : null
+  return message ? <p className={ui.alertError}>{message}</p> : null
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
-    <div className="page-header">
+    <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1>{title}</h1>
-        {subtitle && <p className="subtitle">{subtitle}</p>}
+        <h1 className={ui.h1}>{title}</h1>
+        {subtitle && <p className={ui.subtitle}>{subtitle}</p>}
       </div>
-      {actions && <div className="header-actions">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
     </div>
   )
 }
 
 export function EmptyState({ text, action }: { text: string; action?: ReactNode }) {
   return (
-    <div className="empty">
+    <div className="flex flex-col items-center gap-3 rounded-[10px] border-2 border-dashed border-line px-4 py-14 text-center text-muted">
       <p>{text}</p>
       {action}
     </div>
@@ -37,24 +39,38 @@ const GOOD = ['ACTIVE', 'VERIFIED', 'IN_STOCK', 'PAID', 'COMPLETED', 'DELIVERED'
 const WAITING = ['PENDING', 'DRAFT', 'LOW_STOCK', 'PARTIALLY_PAID', 'UNPAID', 'SHIPPED', 'UNVERIFIED']
 const BAD = ['REJECTED', 'CANCELLED', 'SUSPENDED', 'EXPIRED', 'OUT_OF_STOCK', 'DECLINED', 'CLOSED', 'REFUNDED']
 
+const badgeBase = 'inline-block rounded-full px-2.5 py-0.5 text-[0.75rem] font-semibold whitespace-nowrap'
+
 export function Badge({ value, label }: { value: string | null | undefined; label?: string }) {
   if (!value) return null
-  const tone = GOOD.includes(value) ? 'good' : WAITING.includes(value) ? 'wait' : BAD.includes(value) ? 'bad' : 'plain'
-  return <span className={`badge badge-${tone}`}>{label ?? labelOf(value)}</span>
+  const colors = GOOD.includes(value)
+    ? 'bg-info-soft text-info'
+    : WAITING.includes(value)
+      ? 'bg-warn-soft text-warn'
+      : BAD.includes(value)
+        ? 'bg-danger-soft text-danger'
+        : 'bg-chip text-muted'
+  return <span className={cx(badgeBase, colors)}>{label ?? labelOf(value)}</span>
 }
 
 export function VerifiedBadge({ status, level }: { status: string; level?: string | null }) {
   if (status !== 'VERIFIED') return null
-  return <span className="badge badge-good">✓ {level ? `${labelOf(level)} verified` : 'Verified'}</span>
+  return (
+    <span className={cx(badgeBase, 'bg-info-soft text-info')}>✓ {level ? `${labelOf(level)} verified` : 'Verified'}</span>
+  )
 }
 
 export function Stars({ rating, count }: { rating: number; count?: number }) {
-  if (!count && !rating) return <span className="muted">No reviews yet</span>
+  if (!count && !rating) return <span className="text-muted">No reviews yet</span>
   return (
-    <span className="stars" title={`${rating.toFixed(1)} out of 5`}>
+    <span className="tracking-[1px] whitespace-nowrap text-star" title={`${rating.toFixed(1)} out of 5`}>
       {'★'.repeat(Math.round(rating))}
-      <span className="stars-off">{'★'.repeat(5 - Math.round(rating))}</span>
-      <span className="muted"> {rating.toFixed(1)}{count !== undefined ? ` (${count})` : ''}</span>
+      <span className="text-line">{'★'.repeat(5 - Math.round(rating))}</span>
+      <span className="tracking-normal text-muted">
+        {' '}
+        {rating.toFixed(1)}
+        {count !== undefined ? ` (${count})` : ''}
+      </span>
     </span>
   )
 }
@@ -78,16 +94,16 @@ export function ConfirmButton({
 
   if (!asking) {
     return (
-      <button type="button" className={`link${danger ? ' danger' : ''}`} onClick={() => setAsking(true)} disabled={disabled}>
+      <button type="button" className={danger ? ui.linkDanger : ui.link} onClick={() => setAsking(true)} disabled={disabled}>
         {label}
       </button>
     )
   }
   return (
-    <span className="confirm-inline">
+    <span className="inline-flex gap-3">
       <button
         type="button"
-        className="link danger"
+        className={ui.linkDanger}
         disabled={busy}
         onClick={async () => {
           setBusy(true)
@@ -101,7 +117,7 @@ export function ConfirmButton({
       >
         {confirmLabel}
       </button>
-      <button type="button" className="link" onClick={() => setAsking(false)}>
+      <button type="button" className={ui.link} onClick={() => setAsking(false)}>
         Cancel
       </button>
     </span>
@@ -110,14 +126,17 @@ export function ConfirmButton({
 
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
   return (
-    <div className="tabs" role="tablist">
+    <div className="flex gap-1 overflow-x-auto border-b border-line" role="tablist">
       {tabs.map((tab) => (
         <button
           key={tab.key}
           type="button"
           role="tab"
           aria-selected={active === tab.key}
-          className={active === tab.key ? 'active' : undefined}
+          className={cx(
+            '-mb-px cursor-pointer border-0 border-b-2 bg-transparent px-3.5 py-2.5 text-[0.9rem] font-semibold whitespace-nowrap',
+            active === tab.key ? 'border-accent text-heading' : 'border-transparent text-muted hover:text-heading',
+          )}
           onClick={() => onChange(tab.key)}
         >
           {tab.label}
@@ -125,4 +144,56 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
       ))}
     </div>
   )
+}
+
+// ---- Tables ------------------------------------------------------------------------------
+//   <Table head={<><Th>Name</Th><Th num>Price</Th></>}>
+//     <tr><Td strong>Cola</Td><Td num>120</Td></tr>
+//   </Table>
+
+export function Table({ head, children, foot }: { head: ReactNode; children: ReactNode; foot?: ReactNode }) {
+  return (
+    <div className={ui.tableWrap}>
+      <table className={ui.table}>
+        <thead>
+          <tr>{head}</tr>
+        </thead>
+        <tbody>{children}</tbody>
+        {foot && <tfoot>{foot}</tfoot>}
+      </table>
+    </div>
+  )
+}
+
+export function Th({ children, num, label }: { children?: ReactNode; num?: boolean; label?: string }) {
+  return (
+    <th className={cx(ui.th, num && ui.num)} aria-label={label}>
+      {children}
+    </th>
+  )
+}
+
+type TdProps = {
+  children?: ReactNode
+  num?: boolean // right-aligned number
+  strong?: boolean // darker, bold text
+  wrap?: boolean // allow long text to wrap
+  actions?: boolean // right-aligned action links
+  colSpan?: number
+  className?: string
+}
+
+export function Td({ children, num, strong, wrap, actions, colSpan, className }: TdProps) {
+  return (
+    <td className={cx(ui.td, num && ui.num, strong && ui.strong, wrap && ui.wrap, actions && ui.actions, className)} colSpan={colSpan}>
+      {children}
+    </td>
+  )
+}
+
+/** The business's logo, or its first letter when it has no logo. */
+export function BusinessLogo({ name, src, small }: { name: string; src: string; small?: boolean }) {
+  const size = small ? 'size-11 rounded-[10px] text-base' : 'size-16 rounded-[14px] text-[1.4rem]'
+  if (src) return <img src={src} alt="" className={cx(size, 'shrink-0 object-cover')} />
+  return <span className={cx(size, 'grid shrink-0 place-items-center bg-chip font-extrabold text-accent')}>{initials(name)}</span>
 }

@@ -15,6 +15,7 @@ import {
   ProfileIcon,
   TeamIcon,
 } from './icons'
+import { cx, ui } from '../styles'
 import { ErrorBox, VerifiedBadge } from './ui'
 
 export default function BusinessLayout() {
@@ -26,11 +27,11 @@ export default function BusinessLayout() {
 
   if (!data) {
     return (
-      <main className="center-screen">
+      <main className="grid min-h-screen place-items-center text-muted">
         {error ? (
-          <div className="card">
+          <div className={cx(ui.card, 'flex max-w-100 flex-col gap-3')}>
             <ErrorBox message={error} />
-            <Link to="/dashboard/business" className="back-link">
+            <Link to="/dashboard/business" className={ui.backLink}>
               ← Back to my businesses
             </Link>
           </div>
@@ -54,12 +55,12 @@ export default function BusinessLayout() {
     <SidebarLayout
       title={business.businessName}
       header={
-        <div className="sidebar-business">
-          <Link to="/dashboard/business" className="back-link">
+        <div className="flex flex-col items-start gap-2.5 px-3 pb-5">
+          <Link to="/dashboard/business" className="text-[0.88rem] font-semibold text-side-text no-underline hover:text-lime">
             ← All businesses
           </Link>
-          <div className="sidebar-business-name">{business.businessName}</div>
-          <div className="sidebar-business-meta">{business.businessTypes.map(labelOf).join(' · ')}</div>
+          <div className="text-[1.15rem] leading-tight font-extrabold wrap-break-word text-side-heading">{business.businessName}</div>
+          <div className="-mt-1.5 text-[0.8rem] text-side-text">{business.businessTypes.map(labelOf).join(' · ')}</div>
           <VerifiedBadge status={business.verificationStatus} level={business.verificationLevel} />
         </div>
       }

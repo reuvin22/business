@@ -10,6 +10,7 @@ import { useStockData, type StockData } from '../../hooks/useStockData'
 import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney, formatNumber, todayText } from '../../utils/format'
 import { splitStockItem, stockItemName, stockItemOptions } from '../../utils/options'
+import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'stock', label: 'Stock by location' },
@@ -22,7 +23,7 @@ export default function InventoryPage() {
   const stockData = useStockData(business.id)
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Inventory" subtitle="Stock per product and location. Orders reserve stock when confirmed and take it out when shipped." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <ErrorBox message={stockData.error} />
@@ -62,11 +63,11 @@ function StockTab({ data }: { data: StockData }) {
   }
 
   return (
-    <section className="resource-section">
-      <div className="section-head">
-        <p className="hint">Available = on hand − reserved for confirmed orders.</p>
+    <section className={ui.section}>
+      <div className={ui.sectionHead}>
+        <p className={ui.hint}>Available = on hand − reserved for confirmed orders.</p>
         {canEdit && !adding && (
-          <button type="button" className="btn btn-primary btn-auto" onClick={() => setAdding(true)}>
+          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Add stock record
           </button>
         )}
@@ -104,35 +105,35 @@ function StockTab({ data }: { data: StockData }) {
       ) : inventory.data.length === 0 ? (
         !adding && <EmptyState text="No stock records yet." />
       ) : (
-        <div className="table-wrap card">
-          <table className="table">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Location</th>
-                <th className="num">On hand</th>
-                <th className="num">Reserved</th>
-                <th className="num">Available</th>
-                <th className="num">Alert at</th>
-                <th>Status</th>
-                {canEdit && <th aria-label="Actions" />}
+                <th className={ui.th}>Product</th>
+                <th className={ui.th}>Location</th>
+                <th className={cx(ui.th, ui.num)}>On hand</th>
+                <th className={cx(ui.th, ui.num)}>Reserved</th>
+                <th className={cx(ui.th, ui.num)}>Available</th>
+                <th className={cx(ui.th, ui.num)}>Alert at</th>
+                <th className={ui.th}>Status</th>
+                {canEdit && <th className={ui.th} aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
               {inventory.data.map((item) => (
                 <tr key={item.id}>
-                  <td className="strong">{stockItemName(data.products, data.variantsByProduct, item.productId, item.variantId)}</td>
-                  <td>{locationName(item.locationId)}</td>
-                  <td className="num">{formatNumber(item.quantity)}</td>
-                  <td className="num">{formatNumber(item.reservedQuantity)}</td>
-                  <td className="num strong">{formatNumber(item.availableQuantity)}</td>
-                  <td className="num">{formatNumber(item.reorderLevel)}</td>
-                  <td>
+                  <td className={cx(ui.td, ui.strong)}>{stockItemName(data.products, data.variantsByProduct, item.productId, item.variantId)}</td>
+                  <td className={ui.td}>{locationName(item.locationId)}</td>
+                  <td className={cx(ui.td, ui.num)}>{formatNumber(item.quantity)}</td>
+                  <td className={cx(ui.td, ui.num)}>{formatNumber(item.reservedQuantity)}</td>
+                  <td className={cx(ui.td, ui.num, ui.strong)}>{formatNumber(item.availableQuantity)}</td>
+                  <td className={cx(ui.td, ui.num)}>{formatNumber(item.reorderLevel)}</td>
+                  <td className={ui.td}>
                     <Badge value={item.stockStatus} />
                   </td>
                   {canEdit && (
-                    <td className="actions">
-                      <button type="button" className="link" onClick={() => setAdjusting(item)}>
+                    <td className={cx(ui.td, ui.actions)}>
+                      <button type="button" className={ui.link} onClick={() => setAdjusting(item)}>
                         Adjust
                       </button>
                       <ConfirmButton label="Delete" onConfirm={() => remove(item)} />
@@ -174,31 +175,31 @@ function AdjustForm({ item, name, onDone }: { item: InventoryItem; name: string;
   }
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit}>
-      <h2>Adjust stock · {name}</h2>
-      <p className="hint">
+    <form className={ui.formCard} onSubmit={handleSubmit}>
+      <h2 className={ui.h2}>Adjust stock · {name}</h2>
+      <p className={ui.hint}>
         On hand: {formatNumber(item.quantity)} · Available: {formatNumber(item.availableQuantity)}
       </p>
-      <div className="form-grid three">
-        <label>
+      <div className={ui.formGrid3}>
+        <label className={ui.label}>
           Change (+ add / − remove)
-          <input type="number" step="any" value={change} onChange={(e) => setChange(e.target.value)} placeholder="e.g. 100 or -3" autoFocus />
+          <input className={ui.input} type="number" step="any" value={change} onChange={(e) => setChange(e.target.value)} placeholder="e.g. 100 or -3" autoFocus />
         </label>
-        <label>
+        <label className={ui.label}>
           Reason
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Delivery received" />
+          <input className={ui.input} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Delivery received" />
         </label>
-        <label>
+        <label className={ui.label}>
           Low-stock alert at
-          <input type="number" step="any" value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
+          <input className={ui.input} type="number" step="any" value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
         </label>
       </div>
       <ErrorBox message={error} />
-      <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onDone}>
+      <div className={ui.formActions}>
+        <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary btn-auto">
+        <button type="submit" className={ui.btnPrimary}>
           Save
         </button>
       </div>
@@ -228,11 +229,11 @@ function SalesTab({ data }: { data: StockData }) {
   }
 
   return (
-    <section className="resource-section">
-      <div className="section-head">
-        <p className="hint">Over-the-counter sales. Each sale takes stock out of the location it was sold from.</p>
+    <section className={ui.section}>
+      <div className={ui.sectionHead}>
+        <p className={ui.hint}>Over-the-counter sales. Each sale takes stock out of the location it was sold from.</p>
         {canEdit && !adding && (
-          <button type="button" className="btn btn-primary btn-auto" onClick={() => setAdding(true)}>
+          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Record sale
           </button>
         )}
@@ -259,33 +260,33 @@ function SalesTab({ data }: { data: StockData }) {
       ) : sorted.length === 0 ? (
         !adding && <EmptyState text="No walk-in sales yet." />
       ) : (
-        <div className="table-wrap card">
-          <table className="table">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Product</th>
-                <th>Location</th>
-                <th className="num">Qty</th>
-                <th className="num">Unit price</th>
-                <th className="num">Total</th>
-                {canEdit && <th aria-label="Actions" />}
+                <th className={ui.th}>Date</th>
+                <th className={ui.th}>Product</th>
+                <th className={ui.th}>Location</th>
+                <th className={cx(ui.th, ui.num)}>Qty</th>
+                <th className={cx(ui.th, ui.num)}>Unit price</th>
+                <th className={cx(ui.th, ui.num)}>Total</th>
+                {canEdit && <th className={ui.th} aria-label="Actions" />}
               </tr>
             </thead>
             <tbody>
               {sorted.map((sale) => (
                 <tr key={sale.id}>
-                  <td>{formatDate(sale.date)}</td>
-                  <td className="strong">
+                  <td className={ui.td}>{formatDate(sale.date)}</td>
+                  <td className={cx(ui.td, ui.strong)}>
                     {sale.productName}
                     {sale.variantName && ` (${sale.variantName})`}
                   </td>
-                  <td>{data.locations.find((l) => l.id === sale.locationId)?.locationName ?? '—'}</td>
-                  <td className="num">{sale.quantity}</td>
-                  <td className="num">{formatMoney(sale.unitPrice, business.currency)}</td>
-                  <td className="num strong">{formatMoney(sale.quantity * sale.unitPrice, business.currency)}</td>
+                  <td className={ui.td}>{data.locations.find((l) => l.id === sale.locationId)?.locationName ?? '—'}</td>
+                  <td className={cx(ui.td, ui.num)}>{sale.quantity}</td>
+                  <td className={cx(ui.td, ui.num)}>{formatMoney(sale.unitPrice, business.currency)}</td>
+                  <td className={cx(ui.td, ui.num, ui.strong)}>{formatMoney(sale.quantity * sale.unitPrice, business.currency)}</td>
                   {canEdit && (
-                    <td className="actions">
+                    <td className={cx(ui.td, ui.actions)}>
                       <ConfirmButton label="Undo" confirmLabel="Confirm undo" onConfirm={() => undo(sale.id)} />
                     </td>
                   )}

@@ -9,6 +9,7 @@ import { ExpenseIcon, MarginIcon, RevenueIcon, SalesIcon } from '../../component
 import { ErrorBox, Loading } from '../../components/ui'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney, todayText } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 type Period = 'weekly' | 'monthly'
 const PERIODS: { value: Period; label: string }[] = [
@@ -96,7 +97,7 @@ export default function BusinessDashboard() {
   const [linePeriod, setLinePeriod] = useState<Period>('weekly')
   const [popularPeriod, setPopularPeriod] = useState<Period>('weekly')
 
-  if (!data) return <div className="page">{error ? <ErrorBox message={error} /> : <Loading />}</div>
+  if (!data) return <div className={ui.page}>{error ? <ErrorBox message={error} /> : <Loading />}</div>
 
   const entries = toEntries(data.sales, data.orders, data.products)
   const pendingOrders = data.orders.filter((o) => o.orderStatus === 'PENDING').length
@@ -140,21 +141,21 @@ export default function BusinessDashboard() {
   const labelEvery = (p: Period) => (p === 'weekly' ? 1 : 5)
 
   return (
-    <div className="page dash">
-      <div className="dash-header">
-        <h1>Dashboard</h1>
-        <span className="dash-date">{today}</span>
+    <div className={ui.page}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className={cx(ui.h1, 'mb-0 text-[1.75rem]')}>Dashboard</h1>
+        <span className="text-[0.85rem] text-muted">{today}</span>
       </div>
 
       {(pendingOrders > 0 || lowStock > 0) && (
-        <div className="attention-row">
+        <div className="flex flex-wrap gap-3">
           {pendingOrders > 0 && (
-            <Link to={`${base}/orders`} className="attention">
+            <Link to={`${base}/orders`} className="rounded-lg bg-info-soft px-4 py-3 text-[0.9rem] text-info no-underline hover:underline">
               <strong>{pendingOrders}</strong> new order{pendingOrders > 1 && 's'} waiting for you
             </Link>
           )}
           {lowStock > 0 && (
-            <Link to={`${base}/inventory`} className="attention warn">
+            <Link to={`${base}/inventory`} className="rounded-lg bg-warn-soft px-4 py-3 text-[0.9rem] text-warn no-underline hover:underline">
               <strong>{lowStock}</strong> stock record{lowStock > 1 && 's'} low or out of stock
             </Link>
           )}
@@ -162,13 +163,13 @@ export default function BusinessDashboard() {
       )}
 
       {entries.length === 0 && (
-        <div className="dash-banner">
+        <div className="rounded-lg border border-dashed border-line bg-surface px-4 py-3 text-[0.9rem] [&_a]:font-bold [&_a]:text-accent">
           No sales yet. Record walk-in sales on the <Link to={`${base}/inventory?tab=sales`}>Inventory</Link> page, or get
           orders from other businesses by adding public products with prices on the <Link to={`${base}/products`}>Products</Link> page.
         </div>
       )}
 
-      <div className="kpi-grid">
+      <div className="grid grid-cols-4 gap-4.5 max-xl:grid-cols-2 max-sm:grid-cols-1">
         <Kpi title="Total Revenue" icon={<RevenueIcon />} value={money(cur.revenue)} delta={pctChange(cur.revenue, prev.revenue)} />
         <Kpi
           title="Cost of Goods"
@@ -187,80 +188,80 @@ export default function BusinessDashboard() {
         />
       </div>
 
-      <div className="dash-grid">
-        <div className="dash-col">
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Recent Sales</h2>
-              <Link to={`${base}/orders`} className="panel-link">
+      <div className="grid grid-cols-2 items-start gap-4.5 max-lg:grid-cols-1">
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <section className={PANEL}>
+            <div className={PANEL_HEAD}>
+              <h2 className={ui.h2}>Recent Sales</h2>
+              <Link to={`${base}/orders`} className="text-[0.9rem] font-medium text-heading no-underline hover:underline">
                 View orders
               </Link>
             </div>
             {recent.length === 0 ? (
-              <p className="panel-empty">No sales yet.</p>
+              <p className="py-6 text-center text-[0.9rem] text-muted">No sales yet.</p>
             ) : (
-              <ul className="recent-sales">
+              <ul className="flex flex-col">
                 {recent.map((e) => (
-                  <li key={e.id}>
-                    <span className="item-avatar">{e.productName.charAt(0).toUpperCase()}</span>
-                    <span className="rs-name">{e.productName}</span>
-                    <span className="rs-muted">{new Date(`${e.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                    <span className="rs-muted">{e.quantity} pcs</span>
-                    <span className="rs-status">{e.source}</span>
-                    <span className="rs-total">{money(revenueOf(e), 2)}</span>
+                  <li key={e.id} className="grid grid-cols-[30px_minmax(0,1.6fr)_auto_auto_auto_auto] items-center gap-3.5 py-2.75 text-[0.92rem] max-sm:grid-cols-[30px_minmax(0,1fr)_auto]">
+                    <span className={ui.avatar}>{e.productName.charAt(0).toUpperCase()}</span>
+                    <span className="truncate font-medium text-heading">{e.productName}</span>
+                    <span className="whitespace-nowrap text-muted tabular-nums max-sm:hidden">{new Date(`${e.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    <span className="whitespace-nowrap text-muted tabular-nums max-sm:hidden">{e.quantity} pcs</span>
+                    <span className="font-medium text-up max-sm:hidden">{e.source}</span>
+                    <span className="text-right font-semibold whitespace-nowrap text-heading tabular-nums">{money(revenueOf(e), 2)}</span>
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Units Sold Per Day</h2>
+          <section className={PANEL}>
+            <div className={PANEL_HEAD}>
+              <h2 className={ui.h2}>Units Sold Per Day</h2>
               <SegmentedToggle options={PERIODS} value={barPeriod} onChange={setBarPeriod} />
             </div>
             <ColumnChart data={unitsPerDay} height={300} labelEvery={labelEvery(barPeriod)} format={(n) => `${n} units`} />
           </section>
         </div>
 
-        <div className="dash-col">
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Revenue ({currency})</h2>
+        <div className="flex min-w-0 flex-col gap-4.5">
+          <section className={PANEL}>
+            <div className={PANEL_HEAD}>
+              <h2 className={ui.h2}>Revenue ({currency})</h2>
               <SegmentedToggle options={PERIODS} value={linePeriod} onChange={setLinePeriod} />
             </div>
             <AreaChart data={revenuePerDay} height={300} labelEvery={labelEvery(linePeriod)} format={(n) => money(n, 2)} />
           </section>
 
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Most Popular Products</h2>
+          <section className={PANEL}>
+            <div className={PANEL_HEAD}>
+              <h2 className={ui.h2}>Most Popular Products</h2>
               <SegmentedToggle options={PERIODS} value={popularPeriod} onChange={setPopularPeriod} />
             </div>
             {popular.length === 0 ? (
-              <p className="panel-empty">No sales in this period.</p>
+              <p className="py-6 text-center text-[0.9rem] text-muted">No sales in this period.</p>
             ) : (
-              <table className="popular">
+              <table className="w-full table-fixed border-collapse text-[0.92rem]">
                 <thead>
                   <tr>
-                    <th>Product Name</th>
-                    <th className="num">Price</th>
-                    <th className="num">Sold</th>
-                    <th className="num">Total Revenue</th>
+                    <th className={cx(POP_TH, 'w-1/2 max-sm:w-auto')}>Product Name</th>
+                    <th className={cx(POP_TH, ui.num, 'max-sm:hidden')}>Price</th>
+                    <th className={cx(POP_TH, ui.num)}>Sold</th>
+                    <th className={cx(POP_TH, ui.num)}>Total Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {popular.map((p) => (
                     <tr key={p.id}>
-                      <td>
-                        <span className="pop-name">
-                          <span className="item-avatar">{p.name.charAt(0).toUpperCase()}</span>
-                          <span className="ellipsis">{p.name}</span>
+                      <td className={POP_TD}>
+                        <span className="flex min-w-0 items-center gap-3 font-medium">
+                          <span className={ui.avatar}>{p.name.charAt(0).toUpperCase()}</span>
+                          <span className="truncate">{p.name}</span>
                         </span>
                       </td>
-                      <td className="num muted">{money(p.lastPrice, 2)}</td>
-                      <td className="num muted">{p.units}</td>
-                      <td className="num">{money(p.revenue, 2)}</td>
+                      <td className={cx(POP_TD, ui.num, 'text-muted max-sm:hidden')}>{money(p.lastPrice, 2)}</td>
+                      <td className={cx(POP_TD, ui.num, 'text-muted')}>{p.units}</td>
+                      <td className={cx(POP_TD, ui.num)}>{money(p.revenue, 2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,6 +273,12 @@ export default function BusinessDashboard() {
     </div>
   )
 }
+
+// Dashboard panels: white boxes with a title row
+const PANEL = 'min-w-0 rounded-lg bg-surface px-6 py-5.5 max-md:px-4 max-md:py-4.5'
+const PANEL_HEAD = 'mb-4.5 flex flex-wrap items-center justify-between gap-3'
+const POP_TH = 'pb-2.5 text-left text-[0.78rem] font-medium text-muted'
+const POP_TD = 'py-2.25 text-heading'
 
 function Kpi({
   title,
@@ -290,22 +297,22 @@ function Kpi({
 }) {
   const good = delta !== null && delta >= 0 === upIsGood
   return (
-    <div className="kpi">
-      <div className="kpi-top">
-        <span className="kpi-title">{title}</span>
-        <span className="kpi-icon">{icon}</span>
+    <div className="flex min-w-0 flex-col gap-4 rounded-lg bg-surface px-6 pt-5.5 pb-4.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[0.95rem]">{title}</span>
+        <span className="grid size-9.5 shrink-0 place-items-center rounded-full bg-chip text-accent">{icon}</span>
       </div>
-      <div className="kpi-bottom">
-        <span className="kpi-value">{value}</span>
+      <div className="flex flex-wrap items-baseline gap-3.5">
+        <span className="text-[1.85rem] leading-tight font-bold tracking-tight wrap-break-word text-heading">{value}</span>
         {delta !== null && (
-          <span className={`kpi-delta ${good ? 'up' : 'down'}`} title="Compared with the previous 30 days">
+          <span className={cx('text-[0.9rem] font-semibold tabular-nums', good ? 'text-up' : 'text-down')} title="Compared with the previous 30 days">
             {delta >= 0 ? '+' : ''}
             {delta.toFixed(2)}
             {unit === '%' ? '%' : ' pts'}
           </span>
         )}
       </div>
-      <span className="kpi-caption">Last 30 days</span>
+      <span className="-mt-2 text-[0.75rem] text-muted">Last 30 days</span>
     </div>
   )
 }

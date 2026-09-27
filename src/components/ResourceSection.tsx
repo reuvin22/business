@@ -3,10 +3,11 @@ import type { ListResource } from '../api/resources'
 import type { Saved } from '../api/types'
 import type { Section, Values } from '../forms/fields'
 import { useLoad } from '../hooks/useLoad'
+import { ui } from '../styles'
 import FieldForm from './FieldForm'
-import { ConfirmButton, EmptyState, ErrorBox, Loading } from './ui'
+import { ConfirmButton, EmptyState, ErrorBox, Loading, Table, Td, Th } from './ui'
 
-export type Column<T> = { label: string; render: (item: T) => ReactNode; className?: string }
+export type Column<T> = { label: string; render: (item: T) => ReactNode; num?: boolean }
 
 type Props<T extends Saved> = {
   title: string
@@ -72,14 +73,14 @@ export default function ResourceSection<T extends Saved>({
   }
 
   return (
-    <section className="resource-section">
-      <div className="section-head">
+    <section className={ui.section}>
+      <div className={ui.sectionHead}>
         <div>
-          <h2>{title}</h2>
-          {description && <p className="hint">{description}</p>}
+          <h2 className={ui.h2}>{title}</h2>
+          {description && <p className={ui.hint}>{description}</p>}
         </div>
         {canEdit && editing === null && (
-          <button type="button" className="btn btn-ghost" onClick={() => setEditing('new')}>
+          <button type="button" className={ui.btnGhost} onClick={() => setEditing('new')}>
             {addLabel}
           </button>
         )}
@@ -106,39 +107,36 @@ export default function ResourceSection<T extends Saved>({
       ) : !items?.length ? (
         editing === null && <EmptyState text={emptyText} />
       ) : (
-        <div className="table-wrap card">
-          <table className="table">
-            <thead>
-              <tr>
-                {columns.map((column) => (
-                  <th key={column.label} className={column.className}>
-                    {column.label}
-                  </th>
-                ))}
-                {canEdit && <th aria-label="Actions" />}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  {columns.map((column) => (
-                    <td key={column.label} className={column.className}>
-                      {column.render(item)}
-                    </td>
-                  ))}
-                  {canEdit && (
-                    <td className="actions">
-                      <button type="button" className="link" onClick={() => setEditing(item)}>
-                        Edit
-                      </button>
-                      <ConfirmButton label="Delete" confirmLabel="Confirm delete" onConfirm={() => remove(item)} />
-                    </td>
-                  )}
-                </tr>
+        <Table
+          head={
+            <>
+              {columns.map((column) => (
+                <Th key={column.label} num={column.num}>
+                  {column.label}
+                </Th>
               ))}
-            </tbody>
-          </table>
-        </div>
+              {canEdit && <Th label="Actions" />}
+            </>
+          }
+        >
+          {items.map((item) => (
+            <tr key={item.id}>
+              {columns.map((column) => (
+                <Td key={column.label} num={column.num}>
+                  {column.render(item)}
+                </Td>
+              ))}
+              {canEdit && (
+                <Td actions>
+                  <button type="button" className={ui.link} onClick={() => setEditing(item)}>
+                    Edit
+                  </button>
+                  <ConfirmButton label="Delete" confirmLabel="Confirm delete" onConfirm={() => remove(item)} />
+                </Td>
+              )}
+            </tr>
+          ))}
+        </Table>
       )}
     </section>
   )

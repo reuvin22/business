@@ -23,7 +23,7 @@ export default function LocationsTab({ businessId, canEdit }: { businessId: stri
         { label: 'Name', render: (l) => <strong>{l.locationName}</strong> },
         { label: 'Type', render: (l) => labelOf(l.locationType) },
         { label: 'Address', render: (l) => [l.barangay, l.city, l.province].filter(Boolean).join(', ') || '—' },
-        { label: 'Hours', render: (l) => <span className="wrap">{hoursSummary(l.operatingHours)}</span> },
+        { label: 'Hours', render: (l) => <span className="block max-w-90 whitespace-normal">{hoursSummary(l.operatingHours)}</span> },
         { label: 'Primary', render: (l) => (l.isPrimary ? '★ Primary' : '') },
       ]}
       renderForm={(location, save, close) => <LocationForm location={location} save={save} close={close} />}

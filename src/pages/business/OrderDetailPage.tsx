@@ -4,10 +4,12 @@ import * as ordersApi from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { OrderView, Ratings } from '../../api/types'
 import { useBusiness } from '../../businessContext'
+import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
 import { Badge, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { labelOf, PAYMENT_STATUSES, RATING_DIMENSIONS } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { formatDateTime, formatMoney } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 export default function OrderDetailPage() {
   const { business } = useBusiness()
@@ -15,11 +17,11 @@ export default function OrderDetailPage() {
   const { data: order, error, reload } = useLoad(() => ordersApi.getOrder(business.id, orderId), [business.id, orderId])
 
   const backLink = (
-    <Link to={`/business/${business.id}/orders`} className="back-link">
+    <Link to={`/business/${business.id}/orders`} className={ui.backLink}>
       ← All orders
     </Link>
   )
-  if (!order) return <div className="page">{backLink}{error ? <ErrorBox message={error} /> : <Loading />}</div>
+  if (!order) return <div className={ui.page}>{backLink}{error ? <ErrorBox message={error} /> : <Loading />}</div>
 
   const isSeller = order.sellerBusinessId === business.id
   const other = isSeller
@@ -28,7 +30,7 @@ export default function OrderDetailPage() {
   const money = (n: number) => formatMoney(n, order.currency)
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       {backLink}
       <PageHeader
         title={`Order ${order.orderNumber}`}
@@ -37,41 +39,41 @@ export default function OrderDetailPage() {
           <>
             <Badge value={order.orderStatus} />
             <Badge value={order.paymentStatus} />
-            <Link to={`/business/${business.id}/messages?to=${other.id}`} className="btn btn-ghost">
+            <Link to={`/business/${business.id}/messages?to=${other.id}`} className={ui.btnGhost}>
               Message {other.role.toLowerCase()}
             </Link>
           </>
         }
       />
 
-      {order.statusReason && <p className="alert alert-warn">Reason: {order.statusReason}</p>}
+      {order.statusReason && <p className={ui.alertWarn}>Reason: {order.statusReason}</p>}
 
       {isSeller ? <SellerActions order={order} onChanged={reload} /> : <BuyerActions order={order} onChanged={reload} />}
 
-      <div className="table-wrap card">
-        <table className="table">
+      <div className={ui.tableWrap}>
+        <table className={ui.table}>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>SKU</th>
-              <th className="num">Qty</th>
-              <th className="num">Unit price</th>
-              <th className="num">Subtotal</th>
+              <th className={ui.th}>Product</th>
+              <th className={ui.th}>SKU</th>
+              <th className={cx(ui.th, ui.num)}>Qty</th>
+              <th className={cx(ui.th, ui.num)}>Unit price</th>
+              <th className={cx(ui.th, ui.num)}>Subtotal</th>
             </tr>
           </thead>
           <tbody>
             {order.items.map((item, i) => (
               <tr key={i}>
-                <td className="strong">
+                <td className={cx(ui.td, ui.strong)}>
                   {item.productName}
                   {item.variantName && ` (${item.variantName})`}
                 </td>
-                <td>{item.sku || '—'}</td>
-                <td className="num">
+                <td className={ui.td}>{item.sku || '—'}</td>
+                <td className={cx(ui.td, ui.num)}>
                   {item.quantity} {item.unit}
                 </td>
-                <td className="num">{money(item.unitPrice)}</td>
-                <td className="num">{money(item.subtotal)}</td>
+                <td className={cx(ui.td, ui.num)}>{money(item.unitPrice)}</td>
+                <td className={cx(ui.td, ui.num)}>{money(item.subtotal)}</td>
               </tr>
             ))}
           </tbody>
@@ -85,16 +87,12 @@ export default function OrderDetailPage() {
         </table>
       </div>
 
-      <div className="details-sections">
-        <section className="card details-card">
-          <h3>Delivery</h3>
-          <dl className="details">
+      <DetailsGrid>
+        <DetailsCard title="Delivery">
             <Detail label="Method" value={labelOf(order.fulfillmentMethod)} />
             <Detail label="Delivery status" value={labelOf(order.deliveryStatus)} />
             {order.shippingAddress && (
-              <div className="span-all">
-                <dt>Address</dt>
-                <dd>
+              <DetailItem label="Address" wide>
                   {[
                     order.shippingAddress.recipientName,
                     order.shippingAddress.phone,
@@ -107,62 +105,53 @@ export default function OrderDetailPage() {
                   ]
                     .filter(Boolean)
                     .join(', ')}
-                </dd>
-              </div>
+              </DetailItem>
             )}
-          </dl>
-        </section>
-        <section className="card details-card">
-          <h3>Payment</h3>
-          <dl className="details">
+        </DetailsCard>
+        <DetailsCard title="Payment">
             <Detail label="Method" value={labelOf(order.paymentMethodType)} />
             <Detail label="Terms" value={labelOf(order.paymentTerm)} />
             {order.notes && <Detail label="Buyer's notes" value={order.notes} wide />}
-          </dl>
           {order.paymentInstructions.map((p, i) => (
-            <div key={i} className="payment-instructions">
+            <div key={i} className="col-span-full flex flex-col gap-0.5 rounded-lg bg-info-soft px-3.5 py-3 text-[0.9rem] text-heading">
               <strong>
                 {labelOf(p.paymentType)} {p.provider && `· ${p.provider}`}
               </strong>
               {p.accountName && <span>Account name: {p.accountName}</span>}
               {p.accountNumber && <span>Account number: {p.accountNumber}</span>}
-              {p.instructions && <span className="pre-line">{p.instructions}</span>}
+              {p.instructions && <span className="whitespace-pre-line">{p.instructions}</span>}
             </div>
           ))}
-        </section>
-        <section className="card details-card">
-          <h3>Timeline</h3>
-          <dl className="details">
+        </DetailsCard>
+        <DetailsCard title="Timeline">
             <Detail label="Ordered" value={formatDateTime(order.orderedAt)} />
             <Detail label="Confirmed" value={formatDateTime(order.confirmedAt)} />
             <Detail label="Shipped" value={formatDateTime(order.shippedAt)} />
             <Detail label="Delivered" value={formatDateTime(order.deliveredAt)} />
             <Detail label="Completed" value={formatDateTime(order.completedAt)} />
             {order.cancelledAt && <Detail label="Cancelled / rejected" value={formatDateTime(order.cancelledAt)} />}
-          </dl>
-        </section>
-      </div>
+        </DetailsCard>
+      </DetailsGrid>
     </div>
   )
 }
 
 function TotalRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <tr className={strong ? 'total-row strong' : 'total-row'}>
-      <td colSpan={4} className="num">
+    <tr className={cx('[&>td]:border-b-0 [&>td]:py-1.5', strong && 'text-base font-bold text-heading')}>
+      <td className={cx(ui.td, ui.num)} colSpan={4}>
         {label}
       </td>
-      <td className="num">{value}</td>
+      <td className={cx(ui.td, ui.num)}>{value}</td>
     </tr>
   )
 }
 
 function Detail({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   return (
-    <div className={wide ? 'span-all' : undefined}>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
+    <DetailItem label={label} wide={wide}>
+      {value}
+    </DetailItem>
   )
 }
 
@@ -205,17 +194,17 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
   if (!canHandle && !canRecordPayment) return null
 
   return (
-    <section className="card form-card action-card">
-      <h2>What's next</h2>
+    <section className={ui.formCard}>
+      <h2 className={ui.h2}>What's next</h2>
 
       {canHandle && status === 'PENDING' && (
         <>
-          <p className="hint">Check the charges, then confirm. Confirming reserves the stock at the location you choose.</p>
-          <div className="form-grid three">
+          <p className={ui.hint}>Check the charges, then confirm. Confirming reserves the stock at the location you choose.</p>
+          <div className={ui.formGrid3}>
             {(Object.keys(CHARGE_LABELS) as (keyof typeof CHARGE_LABELS)[]).map((key) => (
               <label key={key}>
                 {CHARGE_LABELS[key]}
-                <input
+                <input className={ui.input}
                   type="number"
                   step="any"
                   min={0}
@@ -225,15 +214,15 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
               </label>
             ))}
           </div>
-          <div className="form-actions">
-            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => run(() => ordersApi.changeOrderCharges(business.id, order.id, charges))}>
+          <div className={ui.formActions}>
+            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => run(() => ordersApi.changeOrderCharges(business.id, order.id, charges))}>
               Update charges
             </button>
           </div>
-          <div className="action-row">
-            <label>
+          <div className={ui.actionRow}>
+            <label className={ui.label}>
               Ship from
-              <select value={chosenLocation} onChange={(e) => setLocationId(e.target.value)}>
+              <select className={ui.input} value={chosenLocation} onChange={(e) => setLocationId(e.target.value)}>
                 <option value="">Select location…</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -242,16 +231,16 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
                 ))}
               </select>
             </label>
-            <button type="button" className="btn btn-primary btn-auto" disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
+            <button type="button" className={ui.btnPrimary} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
               Confirm order
             </button>
           </div>
-          <div className="action-row">
-            <label>
+          <div className={ui.actionRow}>
+            <label className={ui.label}>
               Reason (for rejecting)
-              <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Out of stock" />
+              <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Out of stock" />
             </label>
-            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
+            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
               Reject order
             </button>
           </div>
@@ -259,36 +248,36 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
       )}
 
       {canHandle && status === 'CONFIRMED' && (
-        <div className="action-row">
-          <button type="button" className="btn btn-primary btn-auto" disabled={busy} onClick={() => setStatus('SHIPPED')}>
+        <div className={ui.actionRow}>
+          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('SHIPPED')}>
             {order.fulfillmentMethod === 'PICKUP' ? 'Mark picked up' : 'Mark shipped'}
           </button>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for cancelling" />
-          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('CANCELLED', { reason })}>
+          <input className={ui.rowInput} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for cancelling" />
+          <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED', { reason })}>
             Cancel order
           </button>
         </div>
       )}
 
       {canHandle && status === 'SHIPPED' && (
-        <div className="action-row">
-          <button type="button" className="btn btn-primary btn-auto" disabled={busy} onClick={() => setStatus('DELIVERED')}>
+        <div className={ui.actionRow}>
+          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('DELIVERED')}>
             Mark delivered
           </button>
         </div>
       )}
 
       {['DELIVERED', 'COMPLETED', 'CANCELLED', 'REJECTED'].includes(status) && (
-        <p className="hint">
+        <p className={ui.hint}>
           {status === 'DELIVERED' ? 'Waiting for the buyer to confirm they received it.' : `This order is ${labelOf(status).toLowerCase()}.`}
         </p>
       )}
 
       {canRecordPayment && !['CANCELLED', 'REJECTED'].includes(status) && (
-        <div className="action-row">
-          <label>
+        <div className={ui.actionRow}>
+          <label className={ui.label}>
             Payment status
-            <select
+            <select className={ui.input}
               value={order.paymentStatus}
               disabled={busy}
               onChange={(e) => run(() => ordersApi.changePaymentStatus(business.id, order.id, e.target.value))}
@@ -323,17 +312,17 @@ function BuyerActions({ order, onChanged }: { order: OrderView; onChanged: () =>
   }
 
   return (
-    <section className="card form-card action-card">
-      <h2>What's next</h2>
-      {waiting[status] && <p className="hint">{waiting[status]}</p>}
-      <div className="action-row">
+    <section className={ui.formCard}>
+      <h2 className={ui.h2}>What's next</h2>
+      {waiting[status] && <p className={ui.hint}>{waiting[status]}</p>}
+      <div className={ui.actionRow}>
         {status === 'PENDING' && can('orders.buy') && (
-          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setStatus('CANCELLED')}>
+          <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED')}>
             Cancel order
           </button>
         )}
         {status === 'DELIVERED' && can('orders.buy') && (
-          <button type="button" className="btn btn-primary btn-auto" disabled={busy} onClick={() => setStatus('COMPLETED')}>
+          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('COMPLETED')}>
             I received it — complete order
           </button>
         )}
@@ -365,13 +354,13 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="review-form">
-      <h3>Review {order.sellerBusinessName}</h3>
-      <div className="form-grid three">
+    <form onSubmit={handleSubmit} className={cx(ui.form, 'mt-1 border-t border-line pt-4')}>
+      <h3 className={ui.h3}>Review {order.sellerBusinessName}</h3>
+      <div className={ui.formGrid3}>
         {RATING_DIMENSIONS.map((d) => (
           <label key={d.value}>
             {d.label}
-            <select value={ratings[d.value] ?? ''} onChange={(e) => setRatings((r) => ({ ...r, [d.value]: e.target.value }))}>
+            <select className={ui.input} value={ratings[d.value] ?? ''} onChange={(e) => setRatings((r) => ({ ...r, [d.value]: e.target.value }))}>
               <option value="">Skip</option>
               {[5, 4, 3, 2, 1].map((n) => (
                 <option key={n} value={n}>
@@ -382,13 +371,13 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
           </label>
         ))}
       </div>
-      <label>
+      <label className={ui.label}>
         Your review
-        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea className={ui.input} rows={3} value={text} onChange={(e) => setText(e.target.value)} />
       </label>
       <ErrorBox message={error} />
-      <div className="form-actions">
-        <button type="submit" className="btn btn-primary btn-auto">
+      <div className={ui.formActions}>
+        <button type="submit" className={ui.btnPrimary}>
           Post review
         </button>
       </div>

@@ -4,12 +4,12 @@ import { createBusiness, listMyBusinesses } from '../api/businesses'
 import { listCategories } from '../api/directory'
 import type { BusinessIn } from '../api/types'
 import FieldForm from '../components/FieldForm'
-import { EmptyState, ErrorBox, Loading, PageHeader, VerifiedBadge } from '../components/ui'
+import { BusinessLogo, EmptyState, ErrorBox, Loading, PageHeader, VerifiedBadge } from '../components/ui'
 import { labelOf } from '../constants/options'
 import { businessSections, newBusinessValues } from '../forms/definitions'
 import { useLoad } from '../hooks/useLoad'
 import { categoryOptions } from '../utils/options'
-import { initials } from '../utils/format'
+import { ui } from '../styles'
 
 export default function MyBusinessesPage() {
   const navigate = useNavigate()
@@ -20,14 +20,14 @@ export default function MyBusinessesPage() {
   const openForm = () => setShowForm(true)
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader
         title="My businesses"
         subtitle="Businesses you own or are a team member of."
         actions={
           !showForm &&
           !!businesses?.length && (
-            <button type="button" className="btn btn-primary btn-auto" onClick={openForm}>
+            <button type="button" className={ui.btnPrimary} onClick={openForm}>
               + Create business
             </button>
           )
@@ -52,16 +52,12 @@ export default function MyBusinessesPage() {
       {loading ? (
         <Loading />
       ) : businesses?.length ? (
-        <div className="business-grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
           {businesses.map((b) => (
-            <Link key={b.id} to={`/business/${b.id}`} className="business-card">
-              {b.businessLogo ? (
-                <img src={b.businessLogo} alt="" className="business-logo" />
-              ) : (
-                <span className="business-logo business-logo-fallback">{initials(b.businessName)}</span>
-              )}
-              <span className="business-card-name">{b.businessName}</span>
-              <span className="business-card-meta">{b.businessTypes.map(labelOf).join(' · ')}</span>
+            <Link key={b.id} to={`/business/${b.id}`} className="flex min-h-45 flex-col items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-4 py-5 text-center no-underline transition hover:-translate-y-0.75 hover:border-accent hover:shadow-xl">
+              <BusinessLogo name={b.businessName} src={b.businessLogo} />
+              <span className="text-[1.2rem] font-bold wrap-break-word text-heading">{b.businessName}</span>
+              <span className="text-[0.8rem] text-muted">{b.businessTypes.map(labelOf).join(' · ')}</span>
               <VerifiedBadge status={b.verificationStatus} level={b.verificationLevel} />
             </Link>
           ))}
@@ -71,7 +67,7 @@ export default function MyBusinessesPage() {
           <EmptyState
             text="You don't belong to a business yet. Create one, or ask a business owner to add you to their team."
             action={
-              <button type="button" className="btn btn-primary btn-auto" onClick={openForm}>
+              <button type="button" className={ui.btnPrimary} onClick={openForm}>
                 + Create your first business
               </button>
             }

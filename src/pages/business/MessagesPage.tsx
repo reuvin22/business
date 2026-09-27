@@ -6,6 +6,7 @@ import { useBusiness } from '../../businessContext'
 import { EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { useLoad } from '../../hooks/useLoad'
 import { formatDateTime, initials } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 const REFRESH_EVERY_MS = 10_000
 
@@ -34,36 +35,40 @@ export default function MessagesPage() {
   const select = (id: string) => setParams({ c: id })
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Messages" subtitle="Talk with suppliers, customers, and partners." />
       <ErrorBox message={conversations.error} />
 
-      <div className="chat-layout card">
-        <aside className="chat-list">
+      <div className={cx(ui.card, 'grid h-[calc(100vh-200px)] min-h-105 grid-cols-[280px_1fr] overflow-hidden p-0 max-md:h-auto max-md:grid-cols-1 max-sm:p-0')}>
+        <aside className="flex flex-col overflow-y-auto border-r border-line max-md:max-h-50 max-md:border-r-0 max-md:border-b">
           {!conversations.data ? (
             <Loading />
           ) : conversations.data.length === 0 && !toBusinessId ? (
-            <p className="hint chat-empty">No conversations yet. Start one from a business's page in the directory.</p>
+            <p className={cx(ui.hint, 'm-0 p-4')}>No conversations yet. Start one from a business's page in the directory.</p>
           ) : (
             conversations.data.map((c) => (
               <button
                 key={c.id}
                 type="button"
-                className={`chat-list-item${c.id === selectedId ? ' active' : ''}${c.unread ? ' unread' : ''}`}
+                className={cx(
+                  'flex cursor-pointer items-center gap-2.5 border-0 border-b border-line px-3.5 py-3 text-left text-body hover:bg-page',
+                  c.id === selectedId ? 'bg-chip' : 'bg-transparent',
+                  c.unread && '[&_strong]:text-heading',
+                )}
                 onClick={() => select(c.id)}
               >
-                <span className="item-avatar">{initials(c.otherBusinessName)}</span>
-                <span className="chat-list-text">
+                <span className={ui.avatar}>{initials(c.otherBusinessName)}</span>
+                <span className="flex min-w-0 flex-1 flex-col text-[0.88rem] [&>strong]:font-semibold">
                   <strong>{c.otherBusinessName}</strong>
-                  <span className="ellipsis">{c.lastMessage}</span>
+                  <span className="truncate">{c.lastMessage}</span>
                 </span>
-                {c.unread && <span className="unread-dot" aria-label="Unread" />}
+                {c.unread && <span className="size-2.25 shrink-0 rounded-full bg-accent" aria-label="Unread" />}
               </button>
             ))
           )}
         </aside>
 
-        <section className="chat-thread">
+        <section className="flex min-w-0 flex-col">
           {selectedId ? (
             <Thread key={selectedId} conversationId={selectedId} onSent={conversations.reload} canSend={can('messages.send')} />
           ) : toBusinessId ? (
@@ -99,16 +104,22 @@ function Thread({ conversationId, onSent, canSend }: { conversationId: string; o
 
   return (
     <>
-      <header className="chat-header">
+      <header className="border-b border-line px-4.5 py-3.5 text-heading">
         <strong>{data.conversation.otherBusinessName}</strong>
       </header>
-      <div className="chat-messages">
+      <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4 max-md:max-h-[55vh]">
         {data.messages.map((m) => {
           const mine = m.senderBusinessId === business.id
           return (
-            <div key={m.id} className={`bubble${mine ? ' mine' : ''}`}>
-              <p className="pre-line">{m.message}</p>
-              <span className="bubble-meta">
+            <div
+              key={m.id}
+              className={cx(
+                'max-w-[70%] px-3.5 py-2.5',
+                mine ? 'self-end rounded-[12px_12px_4px_12px] bg-info-soft' : 'self-start rounded-[12px_12px_12px_4px] bg-chip',
+              )}
+            >
+              <p className="whitespace-pre-line text-heading">{m.message}</p>
+              <span className="mt-1 block text-[0.72rem] text-muted">
                 {m.senderName} · {formatDateTime(m.createdAt)}
                 {mine && m.readAt && ' · Seen'}
               </span>
@@ -126,7 +137,7 @@ function Thread({ conversationId, onSent, canSend }: { conversationId: string; o
           }}
         />
       ) : (
-        <p className="hint chat-empty">You don't have permission to send messages.</p>
+        <p className={cx(ui.hint, 'm-0 p-4')}>You don't have permission to send messages.</p>
       )}
     </>
   )
@@ -138,12 +149,12 @@ function NewConversation({ toBusinessId, canSend, onStarted }: { toBusinessId: s
 
   return (
     <>
-      <header className="chat-header">
+      <header className="border-b border-line px-4.5 py-3.5 text-heading">
         <strong>{profile?.business.businessName ?? '…'}</strong>
       </header>
       <ErrorBox message={error} />
-      <div className="chat-messages">
-        <p className="hint chat-empty">Write your first message.</p>
+      <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4 max-md:max-h-[55vh]">
+        <p className={cx(ui.hint, 'm-0 p-4')}>Write your first message.</p>
       </div>
       {canSend && (
         <Composer
@@ -178,10 +189,11 @@ function Composer({ onSend }: { onSend: (text: string) => Promise<void> }) {
   }
 
   return (
-    <form className="chat-composer" onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-2 border-t border-line px-3.5 py-3" onSubmit={handleSubmit}>
       <ErrorBox message={error} />
-      <div className="chat-composer-row">
+      <div className="flex items-end gap-2.5">
         <textarea
+          className={cx(ui.input, 'flex-1 resize-none')}
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -193,7 +205,7 @@ function Composer({ onSend }: { onSend: (text: string) => Promise<void> }) {
             }
           }}
         />
-        <button type="submit" className="btn btn-primary btn-auto" disabled={sending || !text.trim()}>
+        <button type="submit" className={ui.btnPrimary} disabled={sending || !text.trim()}>
           Send
         </button>
       </div>

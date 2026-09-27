@@ -21,14 +21,15 @@ import MessagesPage from './pages/business/MessagesPage'
 import NetworkPage from './pages/business/NetworkPage'
 import CommercePage from './pages/business/CommercePage'
 import TeamPage from './pages/business/TeamPage'
+import { cx, ui } from './styles'
 
 function App() {
   if (!isFirebaseConfigured) {
     return (
-      <main className="auth-page">
-        <div className="card">
-          <h1>Almost there</h1>
-          <p className="subtitle">
+      <main className="grid min-h-screen place-items-center px-4 py-6">
+        <div className={cx(ui.card, 'max-w-100 shadow-xl')}>
+          <h1 className={ui.h1}>Almost there</h1>
+          <p className={ui.subtitle}>
             Firebase isn&apos;t configured yet. Copy <code>.env.example</code> to <code>.env.local</code>, fill in your
             Firebase web app keys, then restart <code>npm run dev</code>.
           </p>

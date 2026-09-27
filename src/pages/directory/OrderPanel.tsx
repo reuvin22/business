@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { placeOrder, quoteOrder } from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { Address, Business, Location, OrderIn, Price, PublicProduct, PublicProfile, Quote } from '../../api/types'
+import { FormSection } from '../../components/FieldForm'
 import { ErrorBox } from '../../components/ui'
 import { FULFILLMENT_METHODS, labelOf } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 /** buyer = the business ordering. Pass null to show the catalog without ordering. */
 type Props = { profile: PublicProfile; products: PublicProduct[]; buyer: Business | null }
@@ -38,6 +40,9 @@ function addressFromLocation(location: Location, buyer: Business): Address {
     postalCode: location.postalCode,
   }
 }
+
+// One line of the price check: name, unit price, subtotal
+const QUOTE_LINE = 'grid grid-cols-[1fr_auto_120px] gap-3 text-[0.9rem] [&>strong]:text-right [&>strong]:text-heading'
 
 /** A row you can order: a product, or one of its variants. */
 type Row = { key: string; product: PublicProduct; variantId: string | null; name: string; unit: string }
@@ -126,18 +131,18 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
       navigate(`/business/${buyerId}/orders/${order.id}`)
     })
 
-  if (rows.length === 0) return <p className="hint">This business has no public products yet.</p>
+  if (rows.length === 0) return <p className={ui.hint}>This business has no public products yet.</p>
 
   return (
-    <div className="order-panel">
-      <div className="table-wrap card">
-        <table className="table">
+    <div className="flex flex-col gap-4.5">
+      <div className={ui.tableWrap}>
+        <table className={ui.table}>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Prices</th>
-              <th>Order rules</th>
-              {buyer && <th className="num">Quantity</th>}
+              <th className={ui.th}>Product</th>
+              <th className={ui.th}>Prices</th>
+              <th className={ui.th}>Order rules</th>
+              {buyer && <th className={cx(ui.th, ui.num)}>Quantity</th>}
             </tr>
           </thead>
           <tbody>
@@ -147,18 +152,18 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
               const image = row.product.images.find((i) => i.isPrimary) ?? row.product.images[0]
               return (
                 <tr key={row.key}>
-                  <td className="strong">
-                    <span className="row-link">
-                      {image && <img src={image.imageUrl} alt="" className="thumb" />}
+                  <td className={cx(ui.td, ui.strong)}>
+                    <span className={ui.rowLink}>
+                      {image && <img src={image.imageUrl} alt="" className={ui.thumb} />}
                       <span>
                         {row.name}
-                        {row.product.description && <span className="muted small block wrap">{row.product.description}</span>}
+                        {row.product.description && <span className="block text-[0.82rem] whitespace-normal text-muted">{row.product.description}</span>}
                       </span>
                     </span>
                   </td>
-                  <td className="small">
+                  <td className={cx(ui.td, ui.small)}>
                     {myPrice && (
-                      <div className="your-price">
+                      <div className="font-bold text-info">
                         Your price: {money(myPrice.price)} (from {myPrice.minimumQuantity})
                       </div>
                     )}
@@ -166,23 +171,23 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
                       <div key={tier.id}>
                         {tier.minimumQuantity}
                         {tier.maximumQuantity ? `–${tier.maximumQuantity}` : '+'} {row.unit}: <strong>{money(tier.price)}</strong>
-                        {tier.customerType && <span className="muted"> ({labelOf(tier.customerType)} only)</span>}
+                        {tier.customerType && <span className="text-muted"> ({labelOf(tier.customerType)} only)</span>}
                       </div>
                     ))}
-                    {!myPrice && tiersFor(row).length === 0 && <span className="muted">Ask for price</span>}
+                    {!myPrice && tiersFor(row).length === 0 && <span className="text-muted">Ask for price</span>}
                   </td>
-                  <td className="small">
+                  <td className={cx(ui.td, ui.small)}>
                     MOQ {rules.minimumOrderQuantity}
                     {rules.orderMultiple > 1 && ` · multiples of ${rules.orderMultiple}`}
                     {rules.leadTimeDays !== null && ` · ${rules.leadTimeDays} day lead time`}
                   </td>
                   {buyer && (
-                  <td className="num">
+                  <td className={cx(ui.td, ui.num)}>
                     <input
                       type="number"
                       min={0}
                       step={rules.orderMultiple}
-                      className="qty-input"
+                      className={cx(ui.inputAuto, 'w-24 text-right')}
                       value={quantities[row.key] ?? ''}
                       onChange={(e) => setQuantities((q) => ({ ...q, [row.key]: e.target.value }))}
                       aria-label={`Quantity of ${row.name}`}
@@ -197,12 +202,12 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
       </div>
 
       {buyer && items.length > 0 && (
-        <section className="card form-card checkout">
-          <h2>Checkout as {buyer.businessName}</h2>
-          <div className="form-grid three">
-            <label>
+        <section className={ui.formCard}>
+          <h2 className={ui.h2}>Checkout as {buyer.businessName}</h2>
+          <div className={ui.formGrid3}>
+            <label className={ui.label}>
               Receive by
-              <select value={method} onChange={(e) => setMethod(e.target.value)}>
+              <select className={ui.input} value={method} onChange={(e) => setMethod(e.target.value)}>
                 {availableMethods.map((m) => (
                   <option key={m.value} value={m.value}>
                     {m.label}
@@ -210,9 +215,9 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
                 ))}
               </select>
             </label>
-            <label>
+            <label className={ui.label}>
               Payment method
-              <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
+              <select className={ui.input} value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
                 <option value="">Discuss with seller</option>
                 {profile.paymentTypes.map((t) => (
                   <option key={t} value={t}>
@@ -221,9 +226,9 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
                 ))}
               </select>
             </label>
-            <label>
+            <label className={ui.label}>
               Payment terms
-              <select value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)}>
+              <select className={ui.input} value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)}>
                 <option value="">Discuss with seller</option>
                 {profile.paymentTerms.paymentTerms.map((t) => (
                   <option key={t} value={t}>
@@ -235,9 +240,8 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
           </div>
 
           {method !== 'PICKUP' && (
-            <fieldset className="form-section">
-              <legend>Delivery address</legend>
-              <div className="form-grid three">
+            <FormSection title="Delivery address">
+              <div className={ui.formGrid3}>
                 {(
                   [
                     ['recipientName', 'Recipient'],
@@ -252,22 +256,22 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
                 ).map(([key, label]) => (
                   <label key={key}>
                     {label}
-                    <input value={shownAddress[key]} onChange={(e) => setAddressField(key, e.target.value)} />
+                    <input className={ui.input} value={shownAddress[key]} onChange={(e) => setAddressField(key, e.target.value)} />
                   </label>
                 ))}
               </div>
-            </fieldset>
+            </FormSection>
           )}
 
-          <label>
+          <label className={ui.label}>
             Notes for the seller
-            <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea className={ui.input} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
 
           {currentQuote && (
-            <div className="quote">
+            <div className="flex flex-col gap-1.5 rounded-lg bg-page px-4 py-3.5">
               {currentQuote.lines.map((line, i) => (
-                <div key={i} className="quote-line">
+                <div key={i} className={QUOTE_LINE}>
                   <span>
                     {line.productName}
                     {line.variantName && ` (${line.variantName})`} × {line.quantity}
@@ -276,18 +280,18 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
                   <strong>{money(line.subtotal)}</strong>
                 </div>
               ))}
-              <div className="quote-line">
+              <div className={QUOTE_LINE}>
                 <span>Delivery fee</span>
                 <span />
                 <strong>{money(currentQuote.deliveryFee)}</strong>
               </div>
-              <div className="quote-line total">
+              <div className={cx(QUOTE_LINE, 'border-t border-line pt-2 text-base')}>
                 <span>Total</span>
                 <span />
                 <strong>{money(currentQuote.total)}</strong>
               </div>
               {currentQuote.problems.length > 0 && (
-                <ul className="alert alert-warn problems">
+                <ul className={cx(ui.alertWarn, 'mt-2 list-disc pl-7')}>
                   {currentQuote.problems.map((p) => (
                     <li key={p}>{p}</li>
                   ))}
@@ -297,13 +301,13 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
           )}
 
           <ErrorBox message={error} />
-          <div className="form-actions">
-            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => checkPrices(buyer.id)}>
+          <div className={ui.formActions}>
+            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => checkPrices(buyer.id)}>
               {currentQuote ? 'Check again' : 'Check prices'}
             </button>
             <button
               type="button"
-              className="btn btn-primary btn-auto"
+              className={ui.btnPrimary}
               disabled={busy || !currentQuote || currentQuote.problems.length > 0}
               onClick={() => submit(buyer.id)}
               title={!currentQuote ? 'Check prices first' : undefined}

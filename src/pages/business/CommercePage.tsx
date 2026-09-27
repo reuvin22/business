@@ -15,6 +15,7 @@ import { labelOf } from '../../constants/options'
 import * as forms from '../../forms/definitions'
 import { useTab } from '../../hooks/useTab'
 import { formatMoney } from '../../utils/format'
+import { ui } from '../../styles'
 
 const TABS = [
   { key: 'delivery', label: 'Delivery' },
@@ -31,7 +32,7 @@ export default function CommercePage() {
   const money = (n: number | null) => formatMoney(n, business.currency)
 
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Delivery & payments" subtitle="How buyers receive and pay for orders. Shown on your public profile." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
@@ -56,8 +57,8 @@ export default function CommercePage() {
             emptyText="No zones: the standard delivery fee applies everywhere."
             columns={[
               { label: 'Area', render: (z) => [z.barangay, z.city, z.province, z.region].filter(Boolean).join(', ') },
-              { label: 'Fee', className: 'num', render: (z) => money(z.deliveryFee) },
-              { label: 'Days', className: 'num', render: (z) => z.estimatedDays ?? '—' },
+              { label: 'Fee', num: true, render: (z) => money(z.deliveryFee) },
+              { label: 'Days', num: true, render: (z) => z.estimatedDays ?? '—' },
             ]}
           />
         </>

@@ -10,6 +10,7 @@ import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDateTime } from '../../utils/format'
+import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'relationships', label: 'Relationships' },
@@ -19,7 +20,7 @@ const TABS = [
 export default function NetworkPage() {
   const [tab, setTab] = useTab(TABS)
   return (
-    <div className="page">
+    <div className={ui.page}>
       <PageHeader title="Network" subtitle="Your suppliers, customers, distributors, and partners — and what they say about you." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       {tab === 'relationships' ? <RelationshipsTab /> : <ReviewsTab />}
@@ -49,10 +50,10 @@ function RelationshipsTab() {
 
   return (
     <>
-      <div className="section-head">
-        <p className="hint">A relationship says what another business is to you, e.g. “Acme is our supplier”. They must accept it.</p>
+      <div className={ui.sectionHead}>
+        <p className={ui.hint}>A relationship says what another business is to you, e.g. “Acme is our supplier”. They must accept it.</p>
         {canEdit && !adding && (
-          <button type="button" className="btn btn-primary btn-auto" onClick={() => setAdding(true)}>
+          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Add relationship
           </button>
         )}
@@ -68,20 +69,20 @@ function RelationshipsTab() {
       <ErrorBox message={error || actionError} />
 
       {incoming.length > 0 && (
-        <section className="resource-section">
-          <h2>Requests waiting for you</h2>
+        <section className={ui.section}>
+          <h2 className={ui.h2}>Requests waiting for you</h2>
           {incoming.map((r) => (
-            <div key={r.id} className="card request-card">
+            <div key={r.id} className={cx(ui.card, 'flex flex-wrap items-center justify-between gap-3 px-4.5 py-4')}>
               <span>
                 <strong>{r.otherBusinessName}</strong> wants to add you — they would be your <strong>{labelOf(r.theirRole).toLowerCase()}</strong>.
-                {r.notes && <span className="hint"> “{r.notes}”</span>}
+                {r.notes && <span className={ui.hint}> “{r.notes}”</span>}
               </span>
               {canEdit && (
-                <span className="actions">
-                  <button type="button" className="btn btn-primary btn-auto" onClick={() => act(() => network.respondToRelationship(business.id, r.id, true))}>
+                <span className="flex gap-2">
+                  <button type="button" className={ui.btnPrimary} onClick={() => act(() => network.respondToRelationship(business.id, r.id, true))}>
                     Accept
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => act(() => network.respondToRelationship(business.id, r.id, false))}>
+                  <button type="button" className={ui.btnGhost} onClick={() => act(() => network.respondToRelationship(business.id, r.id, false))}>
                     Decline
                   </button>
                 </span>
@@ -97,16 +98,16 @@ function RelationshipsTab() {
         !adding && <EmptyState text="No relationships yet." />
       ) : (
         others.length > 0 && (
-          <div className="table-wrap card">
-            <table className="table">
+          <div className={ui.tableWrap}>
+            <table className={ui.table}>
               <thead>
                 <tr>
-                  <th>Business</th>
-                  <th>They are your</th>
-                  <th>Status</th>
-                  <th>Since</th>
-                  <th>Notes</th>
-                  {canEdit && <th aria-label="Actions" />}
+                  <th className={ui.th}>Business</th>
+                  <th className={ui.th}>They are your</th>
+                  <th className={ui.th}>Status</th>
+                  <th className={ui.th}>Since</th>
+                  <th className={ui.th}>Notes</th>
+                  {canEdit && <th className={ui.th} aria-label="Actions" />}
                 </tr>
               </thead>
               <tbody>
@@ -126,20 +127,20 @@ function RelationshipRow({ relationship: r, canEdit, onEnd }: { relationship: Re
   const open = r.status === 'ACTIVE' || r.status === 'PENDING'
   return (
     <tr>
-      <td className="strong">
-        <Link to={`/dashboard/directory/${r.otherBusinessId}`} className="row-link">
+      <td className={cx(ui.td, ui.strong)}>
+        <Link to={`/dashboard/directory/${r.otherBusinessId}`} className={ui.rowLink}>
           {r.otherBusinessName}
         </Link>
       </td>
-      <td>{labelOf(r.theirRole)}</td>
-      <td>
+      <td className={ui.td}>{labelOf(r.theirRole)}</td>
+      <td className={ui.td}>
         <Badge value={r.status} />
-        {r.status === 'PENDING' && <span className="hint"> waiting for them</span>}
+        {r.status === 'PENDING' && <span className={ui.hint}> waiting for them</span>}
       </td>
-      <td>{formatDateTime(r.startedAt)}</td>
-      <td className="wrap">{r.notes || '—'}</td>
+      <td className={ui.td}>{formatDateTime(r.startedAt)}</td>
+      <td className={cx(ui.td, ui.wrap)}>{r.notes || '—'}</td>
       {canEdit && (
-        <td className="actions">
+        <td className={cx(ui.td, ui.actions)}>
           {open && <ConfirmButton label={r.status === 'PENDING' ? 'Cancel request' : 'End'} onConfirm={onEnd} />}
         </td>
       )}
@@ -167,12 +168,12 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit}>
-      <h2>Add relationship</h2>
-      <div className="form-grid">
-        <label>
+    <form className={ui.formCard} onSubmit={handleSubmit}>
+      <h2 className={ui.h2}>Add relationship</h2>
+      <div className={ui.formGrid}>
+        <label className={ui.label}>
           Business *
-          <select value={otherId} onChange={(e) => setOtherId(e.target.value)} autoFocus>
+          <select className={ui.input} value={otherId} onChange={(e) => setOtherId(e.target.value)} autoFocus>
             <option value="">Select…</option>
             {businesses
               .filter((b) => b.id !== business.id)
@@ -184,9 +185,9 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
               ))}
           </select>
         </label>
-        <label>
+        <label className={ui.label}>
           They are our *
-          <select value={type} onChange={(e) => setType(e.target.value)}>
+          <select className={ui.input} value={type} onChange={(e) => setType(e.target.value)}>
             {RELATIONSHIP_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
@@ -194,17 +195,17 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
             ))}
           </select>
         </label>
-        <label className="span-all">
+        <label className={cx(ui.label, 'col-span-full')}>
           Notes
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Supplies our soft drinks since 2020" />
+          <input className={ui.input} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Supplies our soft drinks since 2020" />
         </label>
       </div>
       <ErrorBox message={error} />
-      <div className="form-actions">
-        <button type="button" className="btn btn-ghost" onClick={onDone}>
+      <div className={ui.formActions}>
+        <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary btn-auto">
+        <button type="submit" className={ui.btnPrimary}>
           Send request
         </button>
       </div>
@@ -217,8 +218,8 @@ function ReviewsTab() {
   const { data: reviews, error, reload } = useLoad(() => network.listMyReviews(business.id), [business.id])
 
   return (
-    <section className="resource-section">
-      <p className="hint">
+    <section className={ui.section}>
+      <p className={ui.hint}>
         Average <Stars rating={business.ratingAverage} count={business.ratingCount} />. Only buyers with a completed order can review you.
       </p>
       <ErrorBox message={error} />

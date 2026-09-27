@@ -1,5 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
+import { cx, ui } from '../styles'
+import { ErrorBox } from './ui'
 
 type Props = {
   title?: string
@@ -37,14 +39,12 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
   }
 
   return (
-    <form className="card form-card" onSubmit={handleSubmit} noValidate>
-      {title && <h2>{title}</h2>}
+    <form className={ui.formCard} onSubmit={handleSubmit} noValidate>
+      {title && <h2 className={ui.h2}>{title}</h2>}
 
       {sections.map((section, sectionIndex) => (
-        <fieldset key={section.title} className="form-section">
-          <legend>{section.title}</legend>
-          {section.hint && <p className="hint section-hint">{section.hint}</p>}
-          <div className="form-grid">
+        <FormSection key={section.title} title={section.title} hint={section.hint}>
+          <div className={ui.formGrid}>
             {section.fields.map((field, i) => (
               <FieldInput
                 key={field.key}
@@ -55,24 +55,35 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
               />
             ))}
           </div>
-        </fieldset>
+        </FormSection>
       ))}
 
       {children}
 
-      {error && <p className="alert alert-error pre-line">{error}</p>}
+      <ErrorBox message={error} />
 
-      <div className="form-actions">
+      <div className={ui.formActions}>
         {onCancel && (
-          <button type="button" className="btn btn-ghost" onClick={onCancel}>
+          <button type="button" className={ui.btnGhost} onClick={onCancel}>
             Cancel
           </button>
         )}
-        <button type="submit" className="btn btn-primary btn-auto" disabled={saving}>
+        <button type="submit" className={ui.btnPrimary} disabled={saving}>
           {saving ? 'Saving…' : submitLabel}
         </button>
       </div>
     </form>
+  )
+}
+
+/** A titled group of fields inside a form. */
+export function FormSection({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <fieldset className="mt-1 min-w-0 border-0 p-0">
+      <legend className={ui.legend}>{title}</legend>
+      {hint && <p className={cx(ui.hint, '-mt-1 mb-3')}>{hint}</p>}
+      {children}
+    </fieldset>
   )
 }
 
@@ -88,12 +99,12 @@ function FieldInput({
   autoFocus: boolean
 }) {
   const label = `${field.label}${field.required ? ' *' : ''}`
-  const hint = field.hint && <span className="field-hint">{field.hint}</span>
+  const hint = field.hint && <span className="block text-[0.78rem] font-normal text-muted">{field.hint}</span>
 
   if (field.type === 'checkbox') {
     return (
-      <label className="checkbox-label">
-        <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+      <label className={ui.checkboxLabel}>
+        <input type="checkbox" className={ui.checkbox} checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
         <span>
           {field.label}
           {hint}
@@ -107,19 +118,24 @@ function FieldInput({
     const toggle = (option: string) =>
       onChange(chosen.includes(option) ? chosen.filter((v) => v !== option) : [...chosen, option])
     return (
-      <div className="span-all field-group">
-        <span className="field-label">{label}</span>
+      <div className="col-span-full flex flex-col gap-2">
+        <span className="text-[0.88rem] font-semibold text-heading">{label}</span>
         {field.options?.length ? (
-          <div className="check-grid">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-x-4 gap-y-2">
             {field.options.map((option) => (
-              <label key={option.value} className="checkbox-label">
-                <input type="checkbox" checked={chosen.includes(option.value)} onChange={() => toggle(option.value)} />
+              <label key={option.value} className={ui.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={ui.checkbox}
+                  checked={chosen.includes(option.value)}
+                  onChange={() => toggle(option.value)}
+                />
                 <span>{option.label}</span>
               </label>
             ))}
           </div>
         ) : (
-          <span className="hint">No choices available yet.</span>
+          <span className={ui.hint}>No choices available yet.</span>
         )}
         {hint}
       </div>
@@ -129,10 +145,19 @@ function FieldInput({
   const text = typeof value === 'string' ? value : ''
   let input: ReactNode
   if (field.type === 'textarea') {
-    input = <textarea rows={3} value={text} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} autoFocus={autoFocus} />
+    input = (
+      <textarea
+        rows={3}
+        className={cx(ui.input, 'resize-y')}
+        value={text}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder}
+        autoFocus={autoFocus}
+      />
+    )
   } else if (field.type === 'select') {
     input = (
-      <select value={text} onChange={(e) => onChange(e.target.value)} autoFocus={autoFocus}>
+      <select className={ui.input} value={text} onChange={(e) => onChange(e.target.value)} autoFocus={autoFocus}>
         <option value="">{field.required ? 'Select…' : '— None —'}</option>
         {field.options?.map((option) => (
           <option key={option.value} value={option.value}>
@@ -145,6 +170,7 @@ function FieldInput({
     input = (
       <input
         type={field.type ?? 'text'}
+        className={ui.input}
         value={text}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
@@ -155,7 +181,7 @@ function FieldInput({
   }
 
   return (
-    <label className={field.type === 'textarea' ? 'span-all' : undefined}>
+    <label className={cx(ui.label, field.type === 'textarea' && 'col-span-full')}>
       {label}
       {input}
       {hint}

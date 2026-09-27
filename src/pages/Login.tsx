@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
+import { cx, ui } from '../styles'
 
 type Mode = 'signin' | 'signup'
 
@@ -115,29 +116,29 @@ export default function Login() {
   }
 
   return (
-    <main className="auth-page">
-      <div className="card">
-        <h1>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
-        <p className="subtitle">
+    <main className="grid min-h-screen place-items-center px-4 py-6">
+      <div className={cx(ui.card, 'max-w-100 shadow-xl')}>
+        <h1 className={ui.h1}>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
+        <p className={cx(ui.subtitle, 'mb-6')}>
           {mode === 'signin'
             ? 'Sign in to continue building your business.'
             : 'Get started in less than a minute.'}
         </p>
 
-        <button type="button" className="btn btn-google" onClick={handleGoogle} disabled={busy}>
+        <button type="button" className={cx(ui.btnGhost, 'w-full py-2.5 text-[15px]')} onClick={handleGoogle} disabled={busy}>
           <GoogleIcon />
           Continue with Google
         </button>
 
-        <div className="divider">
+        <div className="my-5 flex items-center gap-3 text-[0.85rem] text-muted before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
           <span>or</span>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form className={ui.form} onSubmit={handleSubmit} noValidate>
           {mode === 'signup' && (
-            <label>
+            <label className={ui.label}>
               Full name
-              <input
+              <input className={ui.input}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -147,9 +148,9 @@ export default function Login() {
             </label>
           )}
 
-          <label>
+          <label className={ui.label}>
             Email
-            <input
+            <input className={ui.input}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -159,16 +160,16 @@ export default function Login() {
             />
           </label>
 
-          <label>
-            <span className="label-row">
+          <label className={ui.label}>
+            <span className="flex items-center justify-between">
               Password
               {mode === 'signin' && (
-                <button type="button" className="link" onClick={handleReset}>
+                <button type="button" className={ui.link} onClick={handleReset}>
                   Forgot password?
                 </button>
               )}
             </span>
-            <input
+            <input className={ui.input}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -180,9 +181,9 @@ export default function Login() {
           </label>
 
           {mode === 'signup' && (
-            <label>
+            <label className={ui.label}>
               Confirm password
-              <input
+              <input className={ui.input}
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -193,26 +194,26 @@ export default function Login() {
             </label>
           )}
 
-          {error && <p className="alert alert-error">{error}</p>}
-          {info && <p className="alert alert-info">{info}</p>}
+          {error && <p className={ui.alertError}>{error}</p>}
+          {info && <p className={ui.alertInfo}>{info}</p>}
 
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className={cx(ui.btnPrimary, 'w-full')} disabled={busy}>
             {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
 
-        <p className="switch">
+        <p className="mt-5 text-center text-[0.9rem] text-muted">
           {mode === 'signin' ? (
             <>
               Don&apos;t have an account?{' '}
-              <button type="button" className="link" onClick={() => switchMode('signup')}>
+              <button type="button" className={ui.link} onClick={() => switchMode('signup')}>
                 Sign up
               </button>
             </>
           ) : (
             <>
               Already have an account?{' '}
-              <button type="button" className="link" onClick={() => switchMode('signin')}>
+              <button type="button" className={ui.link} onClick={() => switchMode('signin')}>
                 Sign in
               </button>
             </>

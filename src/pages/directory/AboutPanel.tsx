@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import type { PublicProfile } from '../../api/types'
+import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
 import { Badge } from '../../components/ui'
 import { labelOf, SUPPLIER_CAPABILITIES } from '../../constants/options'
 import { formatDate, formatMoney } from '../../utils/format'
 import { hoursSummary } from '../../utils/hours'
+import { ui } from '../../styles'
 
 /** Everything public about a business, in cards. */
 export default function AboutPanel({ profile }: { profile: PublicProfile }) {
@@ -12,7 +14,7 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
   const capabilities = SUPPLIER_CAPABILITIES.filter((c) => profile.supplierProfile[c.value])
 
   return (
-    <div className="details-sections">
+    <DetailsGrid>
       <Card title="Business">
         <Item label="Legal name" value={business.legalName} />
         <Item label="Industry" value={business.industry} />
@@ -21,22 +23,19 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         <Item label="Email" value={business.primaryEmail} />
         <Item label="Phone" value={business.primaryPhone} />
         {business.website && (
-          <div className="span-all">
-            <dt>Website</dt>
-            <dd>
-              <a href={business.website} target="_blank" rel="noreferrer">
-                {business.website}
-              </a>
-            </dd>
-          </div>
+          <DetailItem label="Website" wide>
+            <a href={business.website} target="_blank" rel="noreferrer">
+              {business.website}
+            </a>
+          </DetailItem>
         )}
       </Card>
 
       {capabilities.length > 0 && (
         <Card title="Supplier capabilities">
-          <div className="span-all chips">
+          <div className="col-span-full flex flex-wrap gap-1.5">
             {capabilities.map((c) => (
-              <span key={c.value} className="chip">
+              <span key={c.value} className={ui.chip}>
                 ✓ {c.label}
               </span>
             ))}
@@ -105,9 +104,9 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
       {profile.certifications.length > 0 && (
         <Card title="Certifications">
           {profile.certifications.map((c) => (
-            <div key={c.id} className="span-all cert-row">
+            <div key={c.id} className="col-span-full py-1">
               <strong>{c.certificationName}</strong> <Badge value={c.verificationStatus} />
-              <span className="muted small block">
+              <span className="block text-[0.82rem] text-muted">
                 {[c.issuingOrganization, c.certificateNumber, c.expiryDate && `expires ${formatDate(c.expiryDate)}`].filter(Boolean).join(' · ')}
               </span>
             </div>
@@ -119,37 +118,28 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         <Card title="Brands & online">
           <Item label="Brands" value={profile.brands.map((b) => b.brandName).join(', ')} wide />
           {profile.socialLinks.map((s) => (
-            <div key={s.id}>
-              <dt>{labelOf(s.platform)}</dt>
-              <dd>
-                <a href={s.url} target="_blank" rel="noreferrer">
-                  {s.username || s.url}
-                </a>
-              </dd>
-            </div>
+            <DetailItem key={s.id} label={labelOf(s.platform)}>
+              <a href={s.url} target="_blank" rel="noreferrer">
+                {s.username || s.url}
+              </a>
+            </DetailItem>
           ))}
         </Card>
       )}
-    </div>
+    </DetailsGrid>
   )
 }
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="card details-card">
-      <h3>{title}</h3>
-      <dl className="details">{children}</dl>
-    </section>
-  )
+  return <DetailsCard title={title}>{children}</DetailsCard>
 }
 
 /** A label + value row. Hidden when there is no value. */
 function Item({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
   if (!value) return null
   return (
-    <div className={wide ? 'span-all' : undefined}>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
+    <DetailItem label={label} wide={wide}>
+      {value}
+    </DetailItem>
   )
 }

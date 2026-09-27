@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { sendPasswordResetEmail, updateProfile } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../useAuth'
+import { cx, ui } from '../styles'
+import { PageHeader } from '../components/ui'
 
 export default function SettingsPage() {
   const { user, refresh } = useAuth()
@@ -41,38 +43,33 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Settings</h1>
-          <p className="subtitle">Manage your account.</p>
-        </div>
-      </div>
+    <div className={ui.page}>
+      <PageHeader title="Settings" subtitle="Manage your account." />
 
-      <form className="card wide form-card" onSubmit={handleSave}>
-        <h2>Profile</h2>
-        <label>
+      <form className={cx(ui.formCard, 'max-w-160')} onSubmit={handleSave}>
+        <h2 className={ui.h2}>Profile</h2>
+        <label className={ui.label}>
           Display name
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+          <input className={ui.input} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
         </label>
-        <label>
+        <label className={ui.label}>
           Email
-          <input type="email" value={user?.email ?? ''} disabled />
+          <input className={ui.input} type="email" value={user?.email ?? ''} disabled />
         </label>
-        <p className="hint">
+        <p className={ui.hint}>
           Signed in with {[usesGoogle && 'Google', usesPassword && 'email & password'].filter(Boolean).join(' and ')}
         </p>
 
-        {message && <p className="alert alert-info">{message}</p>}
-        {error && <p className="alert alert-error">{error}</p>}
+        {message && <p className={ui.alertInfo}>{message}</p>}
+        {error && <p className={ui.alertError}>{error}</p>}
 
-        <div className="form-actions">
+        <div className={ui.formActions}>
           {usesPassword && (
-            <button type="button" className="btn btn-ghost" onClick={handleResetPassword}>
+            <button type="button" className={ui.btnGhost} onClick={handleResetPassword}>
               Change password
             </button>
           )}
-          <button type="submit" className="btn btn-primary btn-auto" disabled={busy}>
+          <button type="submit" className={ui.btnPrimary} disabled={busy}>
             {busy ? 'Saving…' : 'Save changes'}
           </button>
         </div>
