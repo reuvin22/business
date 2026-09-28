@@ -15,6 +15,7 @@ import { useLiveInventory } from '../../hooks/useLiveInventory'
 import { cx, ui } from '../../styles'
 import { formatDate, formatMoney, formatNumber } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
+import { unitProfit } from '../../utils/profit'
 import ProductForm from './catalog/ProductForm'
 import { productToForm } from './catalog/productValues'
 
@@ -115,6 +116,7 @@ export default function ProductDetailPage() {
             head={
               <>
                 <Th num>Price</Th>
+                <Th num>Profit / unit</Th>
                 <Th>Quantity</Th>
                 <Th>Variant</Th>
                 <Th>For</Th>
@@ -128,6 +130,9 @@ export default function ProductDetailPage() {
               <tr key={p.id}>
                 <Td num strong>
                   {money(p.price)}
+                </Td>
+                <Td num>
+                  <ProfitCell price={p.price} cost={product.costPrice} money={money} />
                 </Td>
                 <Td>{`${p.minimumQuantity}${p.maximumQuantity ? `–${p.maximumQuantity}` : '+'} ${product.unit}`}</Td>
                 <Td>{variantName(p.variantId)}</Td>
@@ -270,5 +275,17 @@ export default function ProductDetailPage() {
         </section>
       )}
     </div>
+  )
+}
+
+/** Profit on one unit at this price (price − cost price), with the margin. */
+function ProfitCell({ price, cost, money }: { price: number; cost: number | null; money: (n: number) => string }) {
+  const earned = unitProfit(price, cost)
+  if (!earned) return <span className="text-muted" title="Set a cost price on the product">—</span>
+  return (
+    <span className={cx('font-semibold', earned.profit < 0 ? 'text-down' : 'text-up')}>
+      {money(earned.profit)}
+      {earned.margin !== null && <span className="ml-1.5 text-[0.78rem] font-normal text-muted">({earned.margin.toFixed(0)}%)</span>}
+    </span>
   )
 }

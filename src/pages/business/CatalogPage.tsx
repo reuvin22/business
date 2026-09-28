@@ -12,9 +12,10 @@ import * as forms from '../../forms/definitions'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney } from '../../utils/format'
+import { unitProfit } from '../../utils/profit'
 import { categoryName } from '../../utils/options'
 import ProductForm from './catalog/ProductForm'
-import { ui } from '../../styles'
+import { cx, ui } from '../../styles'
 
 const TABS = [
   { key: 'products', label: 'Products' },
@@ -64,18 +65,21 @@ function ProductsTab() {
   const [adding, setAdding] = useState(false)
   const canEdit = can('products.manage')
 
-  /** The lowest active price for buying one unit, e.g. "From ₱20.00". */
+  /** The lowest active price for buying one unit, or null when there is none. */
   function startingPrice(productId: string) {
     const amounts = prices
       .filter((price) => price.productId === productId && price.status === 'ACTIVE' && price.minimumQuantity <= 1)
       .map((price) => price.price)
-    return amounts.length ? formatMoney(Math.min(...amounts), business.currency) : '—'
+    return amounts.length ? Math.min(...amounts) : null
   }
+  const money = (n: number | null | undefined) => (n === null || n === undefined ? '—' : formatMoney(n, business.currency))
 
   return (
     <section className={ui.section}>
       <div className={ui.sectionHead}>
-        <p className={ui.hint}>Click a product to see its variants, prices, and stock.</p>
+        <p className={ui.hint}>
+          Click a product to see its variants, prices, and stock. Profit / unit = selling price for one − cost price.
+        </p>
         {canEdit && !adding && (
           <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Add product
@@ -105,6 +109,8 @@ function ProductsTab() {
               <Th>Product</Th>
               <Th>SKU</Th>
               <Th num>Price</Th>
+              <Th num>Cost</Th>
+              <Th num>Profit / unit</Th>
               <Th>Category</Th>
               <Th>Brand</Th>
               <Th>Unit</Th>
@@ -114,7 +120,10 @@ function ProductsTab() {
             </>
           }
         >
-          {products.map((p) => (
+          {products.map((p) => {
+            const price = startingPrice(p.id)
+            const earned = unitProfit(price, p.costPrice)
+            return (
             <tr key={p.id}>
               <Td strong>
                 <Link to={`/business/${business.id}/products/${p.id}`} className={ui.rowLink}>
@@ -124,7 +133,20 @@ function ProductsTab() {
               </Td>
               <Td>{p.sku || '—'}</Td>
               <Td num strong>
-                {startingPrice(p.id)}
+                {money(price)}
+              </Td>
+              <Td num>{money(p.costPrice)}</Td>
+              <Td num>
+                {earned ? (
+                  <>
+                    <span className={cx('font-semibold', earned.profit < 0 ? 'text-down' : 'text-up')}>{money(earned.profit)}</span>
+                    {earned.margin !== null && <div className="text-[0.78rem] text-muted">{earned.margin.toFixed(0)}% margin</div>}
+                  </>
+                ) : (
+                  <span className="text-muted" title={price === null ? 'No selling price yet' : 'Set a cost price on the product'}>
+                    —
+                  </span>
+                )}
               </Td>
               <Td>{categoryName(categories, p.categoryId) || '—'}</Td>
               <Td>{brands.find((b) => b.id === p.brandId)?.brandName ?? '—'}</Td>
@@ -135,7 +157,8 @@ function ProductsTab() {
                 <Badge value={p.status} />
               </Td>
             </tr>
-          ))}
+            )
+          })}
         </Table>
       )}
     </section>
