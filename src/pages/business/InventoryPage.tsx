@@ -233,7 +233,7 @@ function SalesTab({ data }: { data: StockData }) {
   const locationOptions = data.locations.map((l) => ({ value: l.id, label: l.locationName }))
   const sorted = [...(sales.data ?? [])].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
 
-  async function undo(saleId: string) {
+  async function remove(saleId: string) {
     setActionError('')
     try {
       await catalog.deleteSale(business.id, saleId)
@@ -246,7 +246,7 @@ function SalesTab({ data }: { data: StockData }) {
   return (
     <section className={ui.section}>
       <div className={ui.sectionHead}>
-        <p className={ui.hint}>Over-the-counter sales, including those from the selling app. Each sale takes stock out of the location it was sold from.</p>
+        <p className={ui.hint}>Over-the-counter sales, including those from the selling app. Deleting a sale removes it and puts its stock back; a selling-app sale deletes its whole receipt.</p>
         {canEdit && !adding && (
           <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Record sale
@@ -304,11 +304,12 @@ function SalesTab({ data }: { data: StockData }) {
                   <td className={cx(ui.td, ui.num, ui.strong)}>{formatMoney(sale.quantity * sale.unitPrice, business.currency)}</td>
                   {canEdit && (
                     <td className={cx(ui.td, ui.actions)}>
-                      {sale.receiptId ? (
-                        <span className={ui.hint}>Void in the selling app</span>
-                      ) : (
-                        <ConfirmButton label="Undo" confirmLabel="Confirm undo" onConfirm={() => undo(sale.id)} />
-                      )}
+                      <ConfirmButton
+                        label="Delete"
+                        // A selling-app sale is one line of a receipt: the whole receipt goes
+                        confirmLabel={sale.receiptId ? `Delete receipt ${sale.receiptNumber}` : 'Yes, delete'}
+                        onConfirm={() => remove(sale.id)}
+                      />
                     </td>
                   )}
                 </tr>
