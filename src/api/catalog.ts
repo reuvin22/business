@@ -23,7 +23,8 @@ export const listAllVariants = (businessId: string) => get<Variant[]>(`/business
 // ---- Inventory ----
 const inventory = (businessId: string) => `/businesses/${businessId}/inventory`
 
-export const listInventory = (businessId: string) => get<InventoryItem[]>(inventory(businessId))
+export const listInventory = (businessId: string, options: { fresh?: boolean } = {}) =>
+  get<InventoryItem[]>(inventory(businessId), options)
 export const createInventory = (businessId: string, body: unknown) => post<InventoryItem>(inventory(businessId), body)
 export const updateInventory = (businessId: string, inventoryId: string, body: { quantity: number; reorderLevel: number | null }) =>
   put<InventoryItem>(`${inventory(businessId)}/${inventoryId}`, body)
@@ -32,8 +33,11 @@ export const adjustInventory = (businessId: string, inventoryId: string, body: {
 export const deleteInventory = (businessId: string, inventoryId: string) => del(`${inventory(businessId)}/${inventoryId}`)
 
 // ---- Stock history ----
-export const listStockMovements = (businessId: string, filters: { product_id?: string; location_id?: string } = {}) =>
-  get<StockMovement[]>(`/businesses/${businessId}/stock-movements${query(filters)}`)
+export const listStockMovements = (
+  businessId: string,
+  filters: { product_id?: string; location_id?: string } = {},
+  options: { fresh?: boolean } = {},
+) => get<StockMovement[]>(`/businesses/${businessId}/stock-movements${query(filters)}`, options)
 
 // ---- Walk-in sales ----
 export const listSales = (businessId: string) => get<Sale[]>(`/businesses/${businessId}/sales`)

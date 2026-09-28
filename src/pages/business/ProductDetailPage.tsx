@@ -7,10 +7,11 @@ import { useBusiness } from '../../businessContext'
 import DetailsView, { DetailItem, DetailsCard } from '../../components/DetailsView'
 import ProductGallery from '../../components/ProductGallery'
 import StockHistoryTable from '../../components/StockHistoryTable'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Table, Td, Th } from '../../components/ui'
+import { Badge, ConfirmButton, EmptyState, ErrorBox, LiveBadge, Loading, PageHeader, Table, Td, Th } from '../../components/ui'
 import { labelOf } from '../../constants/options'
 import { productSections } from '../../forms/definitions'
 import { useLoad } from '../../hooks/useLoad'
+import { useLiveInventory } from '../../hooks/useLiveInventory'
 import { cx, ui } from '../../styles'
 import { formatDate, formatMoney, formatNumber } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
@@ -26,10 +27,16 @@ export default function ProductDetailPage() {
   const navigate = useNavigate()
   const full = useLoad(() => catalog.getProductFull(business.id, productId), [business.id, productId])
   const updatedAt = full.data?.product.updatedAt
-  const { data: stock = [] } = useLoad(() => catalog.listInventory(business.id), [business.id, updatedAt])
+  const { data: stock = [], live } = useLiveInventory(business.id)
+  // Changes whenever this product's stock changes, so the history below reloads with it
+  const stockVersion = stock
+    .filter((s) => s.productId === productId)
+    .map((s) => `${s.id}:${s.quantity}`)
+    .join()
   const { data: history = [] } = useLoad(
-    () => catalog.listStockMovements(business.id, { product_id: productId }),
-    [business.id, productId, updatedAt],
+    // fresh: the change may have come from someone else (e.g. the selling app)
+    () => catalog.listStockMovements(business.id, { product_id: productId }, { fresh: true }),
+    [business.id, productId, updatedAt, stockVersion],
   )
   const { data: locations = [] } = useLoad(() => locationsApi.list(business.id), [business.id])
   const { data: brands = [] } = useLoad(() => brandsApi.list(business.id), [business.id])
@@ -194,7 +201,9 @@ export default function ProductDetailPage() {
 
       <section className={ui.section}>
         <div className={ui.sectionHead}>
-          <h2 className={ui.h2}>Stock</h2>
+          <h2 className={cx(ui.h2, 'flex items-center gap-2')}>
+            Stock {live && <LiveBadge />}
+          </h2>
           <Link to={`${base}/inventory`} className={ui.btnGhost}>
             Manage stock
           </Link>

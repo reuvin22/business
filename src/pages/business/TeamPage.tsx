@@ -9,6 +9,7 @@ import { useLoad } from '../../hooks/useLoad'
 import { useAuth } from '../../useAuth'
 import { formatDateTime } from '../../utils/format'
 import { cx, ui } from '../../styles'
+import SellersSection from './team/SellersSection'
 
 export default function TeamPage() {
   const { business, role, can } = useBusiness()
@@ -63,7 +64,9 @@ export default function TeamPage() {
               </tr>
             </thead>
             <tbody>
-              {members.map((m) => {
+              {members
+                .filter((m) => m.role !== 'SELLER') // sellers have their own section below
+                .map((m) => {
                 const isMe = m.id === user?.uid
                 const isOwner = m.role === 'OWNER'
                 return (
@@ -99,6 +102,8 @@ export default function TeamPage() {
         </div>
       )}
       {role.role === 'OWNER' && <p className={ui.hint}>You are the owner. Owners cannot leave the business; they can only delete it (Profile → Business info).</p>}
+
+      <SellersSection />
     </div>
   )
 }

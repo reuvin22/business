@@ -53,6 +53,16 @@ export function Badge({ value, label }: { value: string | null | undefined; labe
   return <span className={cx(badgeBase, colors)}>{label ?? labelOf(value)}</span>
 }
 
+/** Shows that the numbers next to it update by themselves. */
+export function LiveBadge() {
+  return (
+    <span className={cx(badgeBase, 'inline-flex items-center gap-1.5 bg-info-soft text-info')} title="Updates by itself">
+      <span className="size-1.5 animate-pulse rounded-full bg-info" />
+      Live
+    </span>
+  )
+}
+
 export function VerifiedBadge({ status, level }: { status: string; level?: string | null }) {
   if (status !== 'VERIFIED') return null
   return (

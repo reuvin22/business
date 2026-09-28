@@ -5,9 +5,10 @@ import type { InventoryItem } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import FieldForm from '../../components/FieldForm'
 import StockHistoryTable from '../../components/StockHistoryTable'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
+import { Badge, ConfirmButton, EmptyState, ErrorBox, LiveBadge, Loading, PageHeader, Tabs } from '../../components/ui'
 import * as forms from '../../forms/definitions'
 import { useLoad } from '../../hooks/useLoad'
+import { useLiveInventory } from '../../hooks/useLiveInventory'
 import { useStockData, type StockData } from '../../hooks/useStockData'
 import { useTab } from '../../hooks/useTab'
 import { formatDate, formatMoney, formatNumber, todayText } from '../../utils/format'
@@ -47,7 +48,8 @@ export default function InventoryPage() {
 
 function StockTab({ data }: { data: StockData }) {
   const { business, can } = useBusiness()
-  const inventory = useLoad(() => catalog.listInventory(business.id), [business.id])
+  // Updates by itself when stock changes anywhere (e.g. a sale in the selling app)
+  const inventory = useLiveInventory(business.id)
   const [adding, setAdding] = useState(false)
   const [adjusting, setAdjusting] = useState<InventoryItem | null>(null)
   const [actionError, setActionError] = useState('')
@@ -61,7 +63,7 @@ function StockTab({ data }: { data: StockData }) {
     setActionError('')
     try {
       await catalog.deleteInventory(business.id, item.id)
-      inventory.reload()
+      inventory.refresh()
     } catch (err) {
       setActionError((err as Error).message)
     }
@@ -70,7 +72,10 @@ function StockTab({ data }: { data: StockData }) {
   return (
     <section className={ui.section}>
       <div className={ui.sectionHead}>
-        <p className={ui.hint}>Available = on hand − reserved for confirmed orders.</p>
+        <p className={ui.hint}>
+          Available = on hand − reserved for confirmed orders.{' '}
+          {inventory.live && <LiveBadge />}
+        </p>
         {canEdit && !adding && (
           <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Add stock record
@@ -88,7 +93,7 @@ function StockTab({ data }: { data: StockData }) {
           onSubmit={async ({ stockItem, ...values }) => {
             await catalog.createInventory(business.id, { ...values, ...splitStockItem(stockItem) })
             setAdding(false)
-            inventory.reload()
+            inventory.refresh()
           }}
         />
       )}
@@ -99,7 +104,7 @@ function StockTab({ data }: { data: StockData }) {
           name={stockItemName(data.products, data.variantsByProduct, adjusting.productId, adjusting.variantId)}
           onDone={() => {
             setAdjusting(null)
-            inventory.reload()
+            inventory.refresh()
           }}
         />
       )}
@@ -241,7 +246,7 @@ function SalesTab({ data }: { data: StockData }) {
   return (
     <section className={ui.section}>
       <div className={ui.sectionHead}>
-        <p className={ui.hint}>Over-the-counter sales. Each sale takes stock out of the location it was sold from.</p>
+        <p className={ui.hint}>Over-the-counter sales, including those from the selling app. Each sale takes stock out of the location it was sold from.</p>
         {canEdit && !adding && (
           <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
             + Record sale
@@ -277,6 +282,7 @@ function SalesTab({ data }: { data: StockData }) {
                 <th className={ui.th}>Date</th>
                 <th className={ui.th}>Product</th>
                 <th className={ui.th}>Location</th>
+                <th className={ui.th}>Receipt</th>
                 <th className={cx(ui.th, ui.num)}>Qty</th>
                 <th className={cx(ui.th, ui.num)}>Unit price</th>
                 <th className={cx(ui.th, ui.num)}>Total</th>
@@ -292,12 +298,17 @@ function SalesTab({ data }: { data: StockData }) {
                     {sale.variantName && ` (${sale.variantName})`}
                   </td>
                   <td className={ui.td}>{data.locations.find((l) => l.id === sale.locationId)?.locationName ?? '—'}</td>
+                  <td className={ui.td}>{sale.receiptNumber || '—'}</td>
                   <td className={cx(ui.td, ui.num)}>{sale.quantity}</td>
                   <td className={cx(ui.td, ui.num)}>{formatMoney(sale.unitPrice, business.currency)}</td>
                   <td className={cx(ui.td, ui.num, ui.strong)}>{formatMoney(sale.quantity * sale.unitPrice, business.currency)}</td>
                   {canEdit && (
                     <td className={cx(ui.td, ui.actions)}>
-                      <ConfirmButton label="Undo" confirmLabel="Confirm undo" onConfirm={() => undo(sale.id)} />
+                      {sale.receiptId ? (
+                        <span className={ui.hint}>Void in the selling app</span>
+                      ) : (
+                        <ConfirmButton label="Undo" confirmLabel="Confirm undo" onConfirm={() => undo(sale.id)} />
+                      )}
                     </td>
                   )}
                 </tr>

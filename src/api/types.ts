@@ -76,6 +76,8 @@ export type Member = Saved & {
   permissions: string[]
   status: string
   joinedAt: number
+  /** Sellers only: the store they sell from (null = any) */
+  locationId?: string | null
 }
 
 // ---- Profile ---------------------------------------------------------------------------
@@ -281,6 +283,9 @@ export type Sale = Saved & {
   unitPrice: number
   unitCost: number | null
   date: DateText
+  /** Set when the sale was made in the selling app */
+  receiptId: string
+  receiptNumber: string
 }
 
 // ---- Commerce settings -------------------------------------------------------------------

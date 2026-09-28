@@ -21,3 +21,18 @@ export const updateMember = (
   body: { role: string; permissions: string[]; status: string },
 ) => put<Member>(`/businesses/${businessId}/members/${userId}`, body)
 export const removeMember = (businessId: string, userId: string) => del(`/businesses/${businessId}/members/${userId}`)
+
+// ---- Seller accounts (people who only use the selling app) ----
+export const listSellers = (businessId: string) => get<Member[]>(`/businesses/${businessId}/sellers`)
+export const createSeller = (
+  businessId: string,
+  body: { displayName: string; email: string; password: string; locationId: string | null },
+) => post<Member>(`/businesses/${businessId}/sellers`, body)
+export const updateSeller = (
+  businessId: string,
+  userId: string,
+  body: { displayName: string; locationId: string | null; status: string },
+) => put<Member>(`/businesses/${businessId}/sellers/${userId}`, body)
+export const setSellerPassword = (businessId: string, userId: string, password: string) =>
+  put<void>(`/businesses/${businessId}/sellers/${userId}/password`, { password })
+export const removeSeller = (businessId: string, userId: string) => del(`/businesses/${businessId}/sellers/${userId}`)

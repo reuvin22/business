@@ -120,6 +120,7 @@ export const PERMISSIONS: Option[] = [
   { value: 'messages.send', label: 'Send messages' },
   { value: 'relationships.manage', label: 'Manage business relationships' },
   { value: 'reviews.write', label: 'Write reviews' },
+  { value: 'pos.use', label: 'Sell in the selling app' },
 ]
 
 // Default permissions for each role (same as app/core/permissions.py)
@@ -131,7 +132,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   SALES: ['products.manage', 'orders.sell', 'messages.send', 'relationships.manage'],
   PURCHASING: ['orders.buy', 'messages.send', 'relationships.manage', 'reviews.write'],
   ACCOUNTING: ['payments.manage'],
-  WAREHOUSE: ['inventory.manage', 'orders.sell'],
+  WAREHOUSE: ['inventory.manage', 'orders.sell', 'pos.use'],
   STAFF: [],
 }
 
@@ -160,7 +161,7 @@ export const STOCK_MOVEMENT_TYPES: Option[] = [
   { value: 'ADJUSTMENT', label: 'Adjustment' },
   { value: 'CORRECTION', label: 'Count correction' },
   { value: 'SALE', label: 'Walk-in sale' },
-  { value: 'SALE_UNDONE', label: 'Sale undone' },
+  { value: 'SALE_UNDONE', label: 'Sale undone / voided' },
   { value: 'ORDER_SHIPPED', label: 'Order shipped' },
   { value: 'RECORD_REMOVED', label: 'Record removed' },
 ]
