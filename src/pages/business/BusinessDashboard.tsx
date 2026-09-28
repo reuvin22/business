@@ -5,7 +5,7 @@ import { listOrders } from '../../api/orders'
 import type { Order, Product, Sale } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { AreaChart, ColumnChart, SegmentedToggle, type Point } from '../../components/charts'
-import { ExpenseIcon, MarginIcon, RevenueIcon, SalesIcon } from '../../components/icons'
+import { ExpenseIcon, MarginIcon, ProfitIcon, RevenueIcon, SalesIcon } from '../../components/icons'
 import { ErrorBox, Loading } from '../../components/ui'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney, todayText } from '../../utils/format'
@@ -17,6 +17,12 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ]
 const PERIOD_DAYS: Record<Period, number> = { weekly: 7, monthly: 30 }
+
+type Money = 'revenue' | 'profit'
+const MONEY_CHARTS: { value: Money; label: string }[] = [
+  { value: 'revenue', label: 'Revenue' },
+  { value: 'profit', label: 'Profit' },
+]
 const KPI_WINDOW = 30
 
 // Orders in these statuses count as sold
@@ -69,11 +75,22 @@ function lastDays(n: number, offset = 0) {
 
 const revenueOf = (e: Entry) => e.quantity * e.unitPrice
 const costOf = (e: Entry) => e.quantity * (e.unitCost ?? 0)
+/** What the business earned on this line: selling price minus what the goods cost it. */
+const profitOf = (e: Entry) => revenueOf(e) - costOf(e)
 
 function totals(entries: Entry[]) {
   const revenue = entries.reduce((t, e) => t + revenueOf(e), 0)
   const expense = entries.reduce((t, e) => t + costOf(e), 0)
-  return { revenue, expense, count: entries.length, margin: revenue > 0 ? ((revenue - expense) / revenue) * 100 : null }
+  const profit = revenue - expense
+  return {
+    revenue,
+    expense,
+    profit,
+    count: entries.length,
+    margin: revenue > 0 ? (profit / revenue) * 100 : null,
+    // Lines whose product has no cost price: their whole price counts as profit
+    withoutCost: entries.filter((e) => e.unitCost === null).length,
+  }
 }
 
 const pctChange = (cur: number, prev: number) => (prev > 0 ? ((cur - prev) / prev) * 100 : null)
@@ -95,6 +112,7 @@ export default function BusinessDashboard() {
 
   const [barPeriod, setBarPeriod] = useState<Period>('weekly')
   const [linePeriod, setLinePeriod] = useState<Period>('weekly')
+  const [lineMoney, setLineMoney] = useState<Money>('revenue')
   const [popularPeriod, setPopularPeriod] = useState<Period>('weekly')
 
   if (!data) return <div className={ui.page}>{error ? <ErrorBox message={error} /> : <Loading />}</div>
@@ -121,14 +139,15 @@ export default function BusinessDashboard() {
     }))
 
   const unitsPerDay = seriesFor(barPeriod, (es) => es.reduce((t, e) => t + e.quantity, 0))
-  const revenuePerDay = seriesFor(linePeriod, (es) => es.reduce((t, e) => t + revenueOf(e), 0))
+  const moneyPerDay = seriesFor(linePeriod, (es) => es.reduce((t, e) => t + (lineMoney === 'profit' ? profitOf(e) : revenueOf(e)), 0))
 
   // Most popular products in the chosen period
-  const popularMap = new Map<string, { name: string; units: number; revenue: number; lastPrice: number }>()
+  const popularMap = new Map<string, { name: string; units: number; revenue: number; profit: number; lastPrice: number }>()
   for (const e of inDays(lastDays(PERIOD_DAYS[popularPeriod]))) {
-    const row = popularMap.get(e.productId) ?? { name: e.productName, units: 0, revenue: 0, lastPrice: e.unitPrice }
+    const row = popularMap.get(e.productId) ?? { name: e.productName, units: 0, revenue: 0, profit: 0, lastPrice: e.unitPrice }
     row.units += e.quantity
     row.revenue += revenueOf(e)
+    row.profit += profitOf(e)
     popularMap.set(e.productId, row)
   }
   const popular = [...popularMap.entries()]
@@ -169,8 +188,16 @@ export default function BusinessDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-4.5 max-xl:grid-cols-2 max-sm:grid-cols-1">
+      {/* As many cards per row as fit (all 5 on a laptop), at least 210px wide each */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4.5">
         <Kpi title="Total Revenue" icon={<RevenueIcon />} value={money(cur.revenue)} delta={pctChange(cur.revenue, prev.revenue)} />
+        <Kpi
+          title="Profit Earned"
+          icon={<ProfitIcon />}
+          value={money(cur.profit)}
+          delta={pctChange(cur.profit, prev.profit)}
+          negative={cur.profit < 0}
+        />
         <Kpi
           title="Cost of Goods"
           icon={<ExpenseIcon />}
@@ -187,6 +214,12 @@ export default function BusinessDashboard() {
           unit="pts"
         />
       </div>
+      {cur.withoutCost > 0 && (
+        <p className="-mt-2 text-[0.85rem] text-muted [&_a]:font-semibold [&_a]:text-accent">
+          {cur.withoutCost} sold item{cur.withoutCost > 1 && 's'} in the last 30 days had no cost price, so their full price counts as profit.
+          Add cost prices on the <Link to={`${base}/products`}>Products</Link> page for exact profit.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 items-start gap-4.5 max-lg:grid-cols-1">
         <div className="flex min-w-0 flex-col gap-4.5">
@@ -227,10 +260,15 @@ export default function BusinessDashboard() {
         <div className="flex min-w-0 flex-col gap-4.5">
           <section className={PANEL}>
             <div className={PANEL_HEAD}>
-              <h2 className={ui.h2}>Revenue ({currency})</h2>
-              <SegmentedToggle options={PERIODS} value={linePeriod} onChange={setLinePeriod} />
+              <h2 className={ui.h2}>
+                {lineMoney === 'profit' ? 'Profit' : 'Revenue'} ({currency})
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                <SegmentedToggle options={MONEY_CHARTS} value={lineMoney} onChange={setLineMoney} />
+                <SegmentedToggle options={PERIODS} value={linePeriod} onChange={setLinePeriod} />
+              </div>
             </div>
-            <AreaChart data={revenuePerDay} height={300} labelEvery={labelEvery(linePeriod)} format={(n) => money(n, 2)} />
+            <AreaChart data={moneyPerDay} height={300} labelEvery={labelEvery(linePeriod)} format={(n) => money(n, 2)} />
           </section>
 
           <section className={PANEL}>
@@ -244,10 +282,11 @@ export default function BusinessDashboard() {
               <table className="w-full table-fixed border-collapse text-[0.92rem]">
                 <thead>
                   <tr>
-                    <th className={cx(POP_TH, 'w-1/2 max-sm:w-auto')}>Product Name</th>
+                    <th className={cx(POP_TH, 'w-2/5 max-sm:w-auto')}>Product Name</th>
                     <th className={cx(POP_TH, ui.num, 'max-sm:hidden')}>Price</th>
                     <th className={cx(POP_TH, ui.num)}>Sold</th>
-                    <th className={cx(POP_TH, ui.num)}>Total Revenue</th>
+                    <th className={cx(POP_TH, ui.num)}>Revenue</th>
+                    <th className={cx(POP_TH, ui.num)}>Profit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -262,6 +301,7 @@ export default function BusinessDashboard() {
                       <td className={cx(POP_TD, ui.num, 'text-muted max-sm:hidden')}>{money(p.lastPrice, 2)}</td>
                       <td className={cx(POP_TD, ui.num, 'text-muted')}>{p.units}</td>
                       <td className={cx(POP_TD, ui.num)}>{money(p.revenue, 2)}</td>
+                      <td className={cx(POP_TD, ui.num, p.profit < 0 ? 'text-down' : 'text-up')}>{money(p.profit, 2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -287,6 +327,7 @@ function Kpi({
   delta,
   upIsGood = true,
   unit = '%',
+  negative = false,
 }: {
   title: string
   icon: ReactNode
@@ -294,6 +335,8 @@ function Kpi({
   delta: number | null
   upIsGood?: boolean
   unit?: '%' | 'pts'
+  /** Show the value in red (e.g. a loss) */
+  negative?: boolean
 }) {
   const good = delta !== null && delta >= 0 === upIsGood
   return (
@@ -303,7 +346,9 @@ function Kpi({
         <span className="grid size-9.5 shrink-0 place-items-center rounded-full bg-chip text-accent">{icon}</span>
       </div>
       <div className="flex flex-wrap items-baseline gap-3.5">
-        <span className="text-[1.85rem] leading-tight font-bold tracking-tight wrap-break-word text-heading">{value}</span>
+        <span className={cx('text-[1.85rem] leading-tight font-bold tracking-tight wrap-break-word', negative ? 'text-down' : 'text-heading')}>
+          {value}
+        </span>
         {delta !== null && (
           <span className={cx('text-[0.9rem] font-semibold tabular-nums', good ? 'text-up' : 'text-down')} title="Compared with the previous 30 days">
             {delta >= 0 ? '+' : ''}

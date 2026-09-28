@@ -24,8 +24,23 @@ function niceTicks(max: number, count = 6) {
   return Array.from({ length: count }, (_, i) => Math.round(i * step * 100) / 100)
 }
 
+/** Like niceTicks, but also goes below zero when some values are negative (e.g. a day with a loss). */
+function niceRange(values: number[], count = 6) {
+  const min = Math.min(...values, 0)
+  const max = Math.max(...values, 0)
+  if (min >= 0) return niceTicks(max, count)
+  const span = (max - min) / (count - 1)
+  const mag = 10 ** Math.floor(Math.log10(span))
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= span) ?? span
+  const ticks = []
+  for (let t = Math.floor(min / step) * step; t <= Math.ceil(max / step) * step + step / 2; t += step) {
+    ticks.push(Math.round(t * 100) / 100)
+  }
+  return ticks
+}
+
 const fmtTick = (n: number) =>
-  n >= 1000 ? `${(n / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k` : n.toLocaleString()
+  Math.abs(n) >= 1000 ? `${(n / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}k` : n.toLocaleString()
 
 const PAD = { top: 12, right: 8, bottom: 28, left: 40 }
 
@@ -183,17 +198,17 @@ export function AreaChart({
   const [ref, width] = useWidth<HTMLDivElement>()
   const [hover, setHover] = useState<number | null>(null)
   const gradientId = useId()
-  const ticks = niceTicks(Math.max(...data.map((d) => d.value), 0))
+  const ticks = niceRange(data.map((d) => d.value))
   const top = ticks[ticks.length - 1]
+  const bottom = ticks[0] // 0, or below 0 when a value is negative
   const plotW = Math.max(width - PAD.left - PAD.right - 16, 0)
   const plotH = height - PAD.top - PAD.bottom
   const x = (i: number) => PAD.left + 8 + (data.length > 1 ? (plotW * i) / (data.length - 1) : plotW / 2)
-  const y = (v: number) => PAD.top + plotH - (v / top) * plotH
+  const y = (v: number) => PAD.top + plotH - ((v - bottom) / (top - bottom)) * plotH
   const pts = data.map((d, i) => [x(i), y(d.value)] as [number, number])
   const line = smoothPath(pts)
-  const area = pts.length
-    ? `${line} L${pts[pts.length - 1][0]},${PAD.top + plotH} L${pts[0][0]},${PAD.top + plotH} Z`
-    : ''
+  // The shaded area reaches down (or up) to the zero line
+  const area = pts.length ? `${line} L${pts[pts.length - 1][0]},${y(0)} L${pts[0][0]},${y(0)} Z` : ''
 
   function onMove(e: MouseEvent<SVGRectElement>) {
     const rect = e.currentTarget.getBoundingClientRect()

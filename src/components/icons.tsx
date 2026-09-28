@@ -109,6 +109,15 @@ export function SalesIcon() {
   )
 }
 
+export function ProfitIcon() {
+  return (
+    <svg {...smallProps}>
+      <polyline points="3 17 9 11 13 15 21 7" />
+      <polyline points="15 7 21 7 21 13" />
+    </svg>
+  )
+}
+
 export function MarginIcon() {
   return (
     <svg {...smallProps}>
