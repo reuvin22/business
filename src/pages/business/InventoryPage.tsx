@@ -5,8 +5,9 @@ import type { InventoryItem } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import FieldForm from '../../components/FieldForm'
 import StockHistoryTable from '../../components/StockHistoryTable'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, LiveBadge, Loading, PageHeader, Tabs } from '../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, LiveBadge, Loading, Modal, PageHeader, Tabs } from '../../components/ui'
 import * as forms from '../../forms/definitions'
+import { useBusy } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useLiveInventory } from '../../hooks/useLiveInventory'
 import { useStockData, type StockData } from '../../hooks/useStockData'
@@ -102,7 +103,8 @@ function StockTab({ data }: { data: StockData }) {
         <AdjustForm
           item={adjusting}
           name={stockItemName(data.products, data.variantsByProduct, adjusting.productId, adjusting.variantId)}
-          onDone={() => {
+          onClose={() => setAdjusting(null)}
+          onSaved={() => {
             setAdjusting(null)
             inventory.refresh()
           }}
@@ -164,41 +166,50 @@ function StockTab({ data }: { data: StockData }) {
   )
 }
 
-/** Add or remove stock (e.g. +100 delivery received, −3 damaged), or change the low-stock alert. */
-function AdjustForm({ item, name, onDone }: { item: InventoryItem; name: string; onDone: () => void }) {
+/** Add or remove stock (e.g. +100 delivery received, −3 damaged), or change the low-stock alert. A dialog. */
+function AdjustForm({ item, name, onClose, onSaved }: { item: InventoryItem; name: string; onClose: () => void; onSaved: () => void }) {
   const { business } = useBusiness()
   const [change, setChange] = useState('')
   const [note, setNote] = useState('')
   const [reorderLevel, setReorderLevel] = useState(item.reorderLevel === null ? '' : String(item.reorderLevel))
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
+
+  const amount = Number(change)
+  const after = item.quantity + (change.trim() && !Number.isNaN(amount) ? amount : 0)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    try {
-      const amount = Number(change)
-      if (change.trim() && amount !== 0) await catalog.adjustInventory(business.id, item.id, { change: amount, note })
-      const newLevel = reorderLevel.trim() === '' ? null : Number(reorderLevel)
-      if (newLevel !== item.reorderLevel) {
-        const quantity = item.quantity + (change.trim() ? amount : 0)
-        await catalog.updateInventory(business.id, item.id, { quantity, reorderLevel: newLevel })
+    await run(async () => {
+      try {
+        if (change.trim() && amount !== 0) await catalog.adjustInventory(business.id, item.id, { change: amount, note })
+        const newLevel = reorderLevel.trim() === '' ? null : Number(reorderLevel)
+        if (newLevel !== item.reorderLevel) {
+          await catalog.updateInventory(business.id, item.id, { quantity: after, reorderLevel: newLevel })
+        }
+        onSaved()
+      } catch (err) {
+        setError((err as Error).message)
       }
-      onDone()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    })
   }
 
   return (
-    <form className={ui.formCard} onSubmit={handleSubmit}>
-      <h2 className={ui.h2}>Adjust stock · {name}</h2>
-      <p className={ui.hint}>
-        On hand: {formatNumber(item.quantity)} · Available: {formatNumber(item.availableQuantity)}
-      </p>
-      <div className={ui.formGrid3}>
+    <Modal title={`Adjust stock · ${name}`} onClose={saving ? () => {} : onClose}>
+      <form className="flex flex-col gap-4 p-6 max-sm:p-4" onSubmit={handleSubmit}>
+        <div>
+          <h2 className={ui.h2}>Adjust stock</h2>
+          <p className={ui.hint}>
+            {name} · On hand {formatNumber(item.quantity)} · Available {formatNumber(item.availableQuantity)}
+          </p>
+        </div>
         <label className={ui.label}>
           Change (+ add / − remove)
           <input className={ui.input} type="number" step="any" value={change} onChange={(e) => setChange(e.target.value)} placeholder="e.g. 100 or -3" autoFocus />
+          {change.trim() && !Number.isNaN(amount) && amount !== 0 && (
+            <span className={cx(ui.hint, after < item.reservedQuantity && 'text-danger')}>On hand after: {formatNumber(after)}</span>
+          )}
         </label>
         <label className={ui.label}>
           Reason
@@ -208,17 +219,17 @@ function AdjustForm({ item, name, onDone }: { item: InventoryItem; name: string;
           Low-stock alert at
           <input className={ui.input} type="number" step="any" value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
         </label>
-      </div>
-      <ErrorBox message={error} />
-      <div className={ui.formActions}>
-        <button type="button" className={ui.btnGhost} onClick={onDone}>
-          Cancel
-        </button>
-        <button type="submit" className={ui.btnPrimary}>
-          Save
-        </button>
-      </div>
-    </form>
+        <ErrorBox message={error} />
+        <div className={ui.formActions}>
+          <button type="button" className={ui.btnGhost} onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
+            Save
+          </BusyButton>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

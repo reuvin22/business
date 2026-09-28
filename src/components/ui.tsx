@@ -1,9 +1,83 @@
 // Small building blocks used across pages.
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { labelOf } from '../constants/options'
 import type { Tab } from '../hooks/useTab'
 import { cx, ui } from '../styles'
 import { initials } from '../utils/format'
+
+/** A small spinning circle in the current text color. */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cx('inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent', className)}
+    />
+  )
+}
+
+/**
+ * A button for an action that talks to the server (save, add, delete...). While `busy` it shows a
+ * spinner (and `busyLabel`, e.g. "Saving…") and cannot be clicked again, so nothing is sent twice.
+ *
+ *   const [saving, run] = useBusy()
+ *   <BusyButton busy={saving} busyLabel="Saving…" className={ui.btnPrimary} onClick={() => run(save)}>Save</BusyButton>
+ */
+export function BusyButton({
+  busy,
+  busyLabel,
+  children,
+  disabled,
+  type = 'button',
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { busy: boolean; busyLabel?: string }) {
+  return (
+    <button
+      type={type}
+      {...props}
+      // inline-flex puts the spinner next to the text, also on link-style buttons
+      className={cx('inline-flex items-center gap-1.5', className)}
+      disabled={disabled || busy}
+      aria-busy={busy}
+    >
+      {busy && <Spinner />}
+      {busy && busyLabel ? busyLabel : children}
+    </button>
+  )
+}
+
+/**
+ * A dialog over the page. Closes with Escape, the backdrop, or `onClose`.
+ * Drawn at the end of <body> (a "portal"), so it is never cut off by the page layout.
+ */
+export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    const scroll = document.body.style.overflow
+    document.body.style.overflow = 'hidden' // the page behind does not scroll
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = scroll
+    }
+  }, [onClose])
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/45 p-4" onMouseDown={onClose}>
+      <div
+        role="dialog"
+        aria-modal
+        aria-label={title}
+        className={cx('w-full rounded-xl bg-surface shadow-xl', wide ? 'max-w-3xl' : 'max-w-lg')}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
+}
 
 export function Loading({ text = 'Loading…' }: { text?: string }) {
   return <p className="py-4 text-muted">{text}</p>
@@ -113,8 +187,9 @@ export function ConfirmButton({
     <span className="inline-flex gap-3">
       <button
         type="button"
-        className={ui.linkDanger}
+        className={cx(ui.linkDanger, 'inline-flex items-center gap-1.5')}
         disabled={busy}
+        aria-busy={busy}
         onClick={async () => {
           setBusy(true)
           try {
@@ -125,9 +200,10 @@ export function ConfirmButton({
           }
         }}
       >
+        {busy && <Spinner className="size-3" />}
         {confirmLabel}
       </button>
-      <button type="button" className={ui.link} onClick={() => setAsking(false)}>
+      <button type="button" className={ui.link} onClick={() => setAsking(false)} disabled={busy}>
         Cancel
       </button>
     </span>

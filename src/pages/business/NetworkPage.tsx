@@ -5,8 +5,9 @@ import * as network from '../../api/network'
 import type { RelationshipView } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import ReviewCard from '../../components/ReviewCard'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Stars, Tabs } from '../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Stars, Tabs } from '../../components/ui'
 import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
+import { useBusy, useRunning } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDateTime } from '../../utils/format'
@@ -33,16 +34,19 @@ function RelationshipsTab() {
   const { data: relationships, error, reload } = useLoad(() => network.listRelationships(business.id), [business.id])
   const [adding, setAdding] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [running, run] = useRunning()
   const canEdit = can('relationships.manage')
 
-  async function act(action: () => Promise<unknown>) {
+  async function act(name: string, action: () => Promise<unknown>) {
     setActionError('')
-    try {
-      await action()
-      reload()
-    } catch (err) {
-      setActionError((err as Error).message)
-    }
+    await run(name, async () => {
+      try {
+        await action()
+        reload()
+      } catch (err) {
+        setActionError((err as Error).message)
+      }
+    })
   }
 
   const incoming = relationships?.filter((r) => r.direction === 'INCOMING' && r.status === 'PENDING') ?? []
@@ -79,12 +83,22 @@ function RelationshipsTab() {
               </span>
               {canEdit && (
                 <span className="flex gap-2">
-                  <button type="button" className={ui.btnPrimary} onClick={() => act(() => network.respondToRelationship(business.id, r.id, true))}>
+                  <BusyButton
+                    className={ui.btnPrimary}
+                    busy={running === `${r.id}:accept`}
+                    disabled={running !== ''}
+                    onClick={() => act(`${r.id}:accept`, () => network.respondToRelationship(business.id, r.id, true))}
+                  >
                     Accept
-                  </button>
-                  <button type="button" className={ui.btnGhost} onClick={() => act(() => network.respondToRelationship(business.id, r.id, false))}>
+                  </BusyButton>
+                  <BusyButton
+                    className={ui.btnGhost}
+                    busy={running === `${r.id}:decline`}
+                    disabled={running !== ''}
+                    onClick={() => act(`${r.id}:decline`, () => network.respondToRelationship(business.id, r.id, false))}
+                  >
                     Decline
-                  </button>
+                  </BusyButton>
                 </span>
               )}
             </div>
@@ -112,7 +126,7 @@ function RelationshipsTab() {
               </thead>
               <tbody>
                 {others.map((r) => (
-                  <RelationshipRow key={r.id} relationship={r} canEdit={canEdit} onEnd={() => act(() => network.endRelationship(business.id, r.id))} />
+                  <RelationshipRow key={r.id} relationship={r} canEdit={canEdit} onEnd={() => act(`${r.id}:end`, () => network.endRelationship(business.id, r.id))} />
                 ))}
               </tbody>
             </table>
@@ -155,16 +169,19 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
   const [type, setType] = useState('SUPPLIER')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
+  const [saving, runSave] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!otherId) return setError('Choose a business.')
-    try {
-      await network.requestRelationship(business.id, { relatedBusinessId: otherId, relationshipType: type, notes })
-      onDone()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await runSave(async () => {
+      try {
+        await network.requestRelationship(business.id, { relatedBusinessId: otherId, relationshipType: type, notes })
+        onDone()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -205,9 +222,9 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
         <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className={ui.btnPrimary}>
+        <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Sending…">
           Send request
-        </button>
+        </BusyButton>
       </div>
     </form>
   )

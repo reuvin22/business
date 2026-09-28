@@ -5,8 +5,9 @@ import { locationsApi } from '../../api/resources'
 import type { OrderView, Ratings } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
-import { Badge, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { Badge, BusyButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { labelOf, PAYMENT_STATUSES, RATING_DIMENSIONS } from '../../constants/options'
+import { useBusy } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { formatDateTime, formatMoney } from '../../utils/format'
 import { cx, ui } from '../../styles'
@@ -155,23 +156,23 @@ function Detail({ label, value, wide }: { label: string; value: string; wide?: b
   )
 }
 
-/** Runs an order action and shows its error, if any. */
+/** Runs an order action and shows its error, if any. `active` names the running action (its button spins). */
 function useAction(onChanged: () => void) {
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  async function run(action: () => Promise<unknown>) {
+  const [active, setActive] = useState('')
+  async function run(action: () => Promise<unknown>, name = 'action') {
     setError('')
-    setBusy(true)
+    setActive(name)
     try {
       await action()
       onChanged()
     } catch (err) {
       setError((err as Error).message)
     } finally {
-      setBusy(false)
+      setActive('')
     }
   }
-  return { error, busy, run }
+  return { error, busy: active !== '', active, run }
 }
 
 const CHARGE_LABELS = { deliveryFee: 'Delivery fee', tax: 'Tax', discount: 'Discount' }
@@ -182,13 +183,13 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
   const [locationId, setLocationId] = useState('')
   const [reason, setReason] = useState('')
   const [charges, setCharges] = useState({ deliveryFee: order.deliveryFee, tax: order.tax, discount: order.discount })
-  const { error, busy, run } = useAction(onChanged)
+  const { error, busy, active, run } = useAction(onChanged)
 
   const status = order.orderStatus
   const canHandle = can('orders.sell')
   const canRecordPayment = can('orders.sell') || can('payments.manage')
   const setStatus = (newStatus: string, extra: { fulfillmentLocationId?: string; reason?: string } = {}) =>
-    run(() => ordersApi.changeOrderStatus(business.id, order.id, { status: newStatus, ...extra }))
+    run(() => ordersApi.changeOrderStatus(business.id, order.id, { status: newStatus, ...extra }), newStatus)
   const chosenLocation = locationId || locations.find((l) => l.isPrimary)?.id || ''
 
   if (!canHandle && !canRecordPayment) return null
@@ -215,9 +216,9 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
             ))}
           </div>
           <div className={ui.formActions}>
-            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => run(() => ordersApi.changeOrderCharges(business.id, order.id, charges))}>
+            <BusyButton busy={active === 'charges'} className={ui.btnGhost} disabled={busy} onClick={() => run(() => ordersApi.changeOrderCharges(business.id, order.id, charges), 'charges')}>
               Update charges
-            </button>
+            </BusyButton>
           </div>
           <div className={ui.actionRow}>
             <label className={ui.label}>
@@ -231,39 +232,39 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
                 ))}
               </select>
             </label>
-            <button type="button" className={ui.btnPrimary} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
+            <BusyButton busy={active === 'CONFIRMED'} className={ui.btnPrimary} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
               Confirm order
-            </button>
+            </BusyButton>
           </div>
           <div className={ui.actionRow}>
             <label className={ui.label}>
               Reason (for rejecting)
               <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Out of stock" />
             </label>
-            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
+            <BusyButton busy={active === 'REJECTED'} className={ui.btnGhost} disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
               Reject order
-            </button>
+            </BusyButton>
           </div>
         </>
       )}
 
       {canHandle && status === 'CONFIRMED' && (
         <div className={ui.actionRow}>
-          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('SHIPPED')}>
+          <BusyButton busy={active === 'SHIPPED'} className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('SHIPPED')}>
             {order.fulfillmentMethod === 'PICKUP' ? 'Mark picked up' : 'Mark shipped'}
-          </button>
+          </BusyButton>
           <input className={ui.rowInput} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for cancelling" />
-          <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED', { reason })}>
+          <BusyButton busy={active === 'CANCELLED'} className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED', { reason })}>
             Cancel order
-          </button>
+          </BusyButton>
         </div>
       )}
 
       {canHandle && status === 'SHIPPED' && (
         <div className={ui.actionRow}>
-          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('DELIVERED')}>
+          <BusyButton busy={active === 'DELIVERED'} className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('DELIVERED')}>
             Mark delivered
-          </button>
+          </BusyButton>
         </div>
       )}
 
@@ -299,9 +300,10 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
 
 function BuyerActions({ order, onChanged }: { order: OrderView; onChanged: () => void }) {
   const { business, can } = useBusiness()
-  const { error, busy, run } = useAction(onChanged)
+  const { error, busy, active, run } = useAction(onChanged)
   const status = order.orderStatus
-  const setStatus = (newStatus: string) => run(() => ordersApi.changeOrderStatus(business.id, order.id, { status: newStatus }))
+  const setStatus = (newStatus: string) =>
+    run(() => ordersApi.changeOrderStatus(business.id, order.id, { status: newStatus }), newStatus)
 
   const canReview = status === 'COMPLETED' && !order.reviewed && can('reviews.write')
   const waiting: Record<string, string> = {
@@ -317,14 +319,14 @@ function BuyerActions({ order, onChanged }: { order: OrderView; onChanged: () =>
       {waiting[status] && <p className={ui.hint}>{waiting[status]}</p>}
       <div className={ui.actionRow}>
         {status === 'PENDING' && can('orders.buy') && (
-          <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED')}>
+          <BusyButton busy={active === 'CANCELLED'} className={ui.btnGhost} disabled={busy} onClick={() => setStatus('CANCELLED')}>
             Cancel order
-          </button>
+          </BusyButton>
         )}
         {status === 'DELIVERED' && can('orders.buy') && (
-          <button type="button" className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('COMPLETED')}>
+          <BusyButton busy={active === 'COMPLETED'} className={ui.btnPrimary} disabled={busy} onClick={() => setStatus('COMPLETED')}>
             I received it — complete order
-          </button>
+          </BusyButton>
         )}
       </div>
       <ErrorBox message={error} />
@@ -338,6 +340,7 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
   const [ratings, setRatings] = useState<Record<string, string>>({})
   const [text, setText] = useState('')
   const [error, setError] = useState('')
+  const [saving, runSave] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -345,12 +348,14 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
     const scores = Object.fromEntries(
       RATING_DIMENSIONS.map((d) => [d.value, ratings[d.value] ? Number(ratings[d.value]) : null]),
     ) as Ratings
-    try {
-      await ordersApi.reviewOrder(business.id, order.id, { ratings: scores, review: text })
-      onDone()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await runSave(async () => {
+      try {
+        await ordersApi.reviewOrder(business.id, order.id, { ratings: scores, review: text })
+        onDone()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -377,9 +382,9 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
       </label>
       <ErrorBox message={error} />
       <div className={ui.formActions}>
-        <button type="submit" className={ui.btnPrimary}>
+        <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Posting…">
           Post review
-        </button>
+        </BusyButton>
       </div>
     </form>
   )

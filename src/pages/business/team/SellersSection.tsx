@@ -3,8 +3,9 @@ import { createSeller, listSellers, removeSeller, setSellerPassword, updateSelle
 import { locationsApi } from '../../../api/resources'
 import type { Location, Member } from '../../../api/types'
 import { useBusiness } from '../../../businessContext'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading } from '../../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading } from '../../../components/ui'
 import { MEMBER_STATUSES } from '../../../constants/options'
+import { useBusy } from '../../../hooks/useBusy'
 import { useLoad } from '../../../hooks/useLoad'
 import { cx, ui } from '../../../styles'
 import { formatDateTime } from '../../../utils/format'
@@ -212,9 +213,9 @@ function CreateSellerForm({
         <button type="button" className={ui.btnGhost} onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className={ui.btnPrimary} disabled={saving || !displayName.trim() || !email.trim() || password.length < 6}>
-          {saving ? 'Creating…' : 'Create account'}
-        </button>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim() || !email.trim() || password.length < 6} busy={saving} busyLabel="Creating…">
+          Create account
+        </BusyButton>
       </div>
     </form>
   )
@@ -226,16 +227,19 @@ function EditSellerForm({ seller, locations, onDone }: { seller: Member; locatio
   const [locationId, setLocationId] = useState(seller.locationId ?? '')
   const [status, setStatus] = useState(seller.status)
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    try {
-      await updateSeller(business.id, seller.id, { displayName, locationId: locationId || null, status })
-      onDone()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        await updateSeller(business.id, seller.id, { displayName, locationId: locationId || null, status })
+        onDone()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -264,9 +268,9 @@ function EditSellerForm({ seller, locations, onDone }: { seller: Member; locatio
         <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className={ui.btnPrimary} disabled={!displayName.trim()}>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim()} busy={saving} busyLabel="Saving…">
           Save changes
-        </button>
+        </BusyButton>
       </div>
     </form>
   )
@@ -277,16 +281,19 @@ function PasswordForm({ seller, onDone }: { seller: Member; onDone: () => void }
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saving, run] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    try {
-      await setSellerPassword(business.id, seller.id, password)
-      setSaved(true)
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        await setSellerPassword(business.id, seller.id, password)
+        setSaved(true)
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -308,9 +315,9 @@ function PasswordForm({ seller, onDone }: { seller: Member; onDone: () => void }
           {saved ? 'Close' : 'Cancel'}
         </button>
         {!saved && (
-          <button type="submit" className={ui.btnPrimary} disabled={password.length < 6}>
+          <BusyButton type="submit" className={ui.btnPrimary} disabled={password.length < 6} busy={saving} busyLabel="Saving…">
             Set password
-          </button>
+          </BusyButton>
         )}
       </div>
     </form>

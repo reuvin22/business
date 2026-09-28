@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
+import { BusyButton } from '../components/ui'
 import { cx, ui } from '../styles'
 
 type Mode = 'signin' | 'signup'
@@ -197,9 +198,9 @@ export default function Login() {
           {error && <p className={ui.alertError}>{error}</p>}
           {info && <p className={ui.alertInfo}>{info}</p>}
 
-          <button type="submit" className={cx(ui.btnPrimary, 'w-full')} disabled={busy}>
-            {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-          </button>
+          <BusyButton type="submit" className={cx(ui.btnPrimary, 'w-full')} busy={busy} busyLabel="Please wait…">
+            {mode === 'signin' ? 'Sign in' : 'Create account'}
+          </BusyButton>
         </form>
 
         <p className="mt-5 text-center text-[0.9rem] text-muted">

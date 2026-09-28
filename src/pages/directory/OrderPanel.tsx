@@ -4,7 +4,7 @@ import { placeOrder, quoteOrder } from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { Address, Business, Location, OrderIn, Price, PublicProduct, PublicProfile, Quote } from '../../api/types'
 import { FormSection } from '../../components/FieldForm'
-import { ErrorBox, ProductThumb } from '../../components/ui'
+import { BusyButton, ErrorBox, ProductThumb } from '../../components/ui'
 import { FULFILLMENT_METHODS, labelOf } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney } from '../../utils/format'
@@ -88,7 +88,8 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
   const [notes, setNotes] = useState('')
   const [quote, setQuote] = useState<{ key: string; result: Quote } | null>(null)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [active, setActive] = useState('') // the action that is running: its button spins
+  const busy = active !== ''
 
   // Pre-fill the address with the buyer's primary location until the user types their own
   const primary = buyerLocations.find((l) => l.isPrimary) ?? buyerLocations[0]
@@ -112,24 +113,24 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
   const bodyKey = JSON.stringify(body)
   const currentQuote = quote?.key === bodyKey ? quote.result : null
 
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, name: string) {
     setError('')
-    setBusy(true)
+    setActive(name)
     try {
       await action()
     } catch (err) {
       setError((err as Error).message)
     } finally {
-      setBusy(false)
+      setActive('')
     }
   }
 
-  const checkPrices = (buyerId: string) => run(async () => setQuote({ key: bodyKey, result: await quoteOrder(buyerId, body) }))
+  const checkPrices = (buyerId: string) => run(async () => setQuote({ key: bodyKey, result: await quoteOrder(buyerId, body) }), 'check')
   const submit = (buyerId: string) =>
     run(async () => {
       const order = await placeOrder(buyerId, body)
       navigate(`/business/${buyerId}/orders/${order.id}`)
-    })
+    }, 'place')
 
   if (rows.length === 0) return <p className={ui.hint}>This business has no public products yet.</p>
 
@@ -301,18 +302,19 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
 
           <ErrorBox message={error} />
           <div className={ui.formActions}>
-            <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => checkPrices(buyer.id)}>
+            <BusyButton className={ui.btnGhost} busy={active === 'check'} busyLabel="Checking…" disabled={busy} onClick={() => checkPrices(buyer.id)}>
               {currentQuote ? 'Check again' : 'Check prices'}
-            </button>
-            <button
-              type="button"
+            </BusyButton>
+            <BusyButton
+              busy={active === 'place'}
+              busyLabel="Placing order…"
               className={ui.btnPrimary}
               disabled={busy || !currentQuote || currentQuote.problems.length > 0}
               onClick={() => submit(buyer.id)}
               title={!currentQuote ? 'Check prices first' : undefined}
             >
               Place order
-            </button>
+            </BusyButton>
           </div>
         </section>
       )}

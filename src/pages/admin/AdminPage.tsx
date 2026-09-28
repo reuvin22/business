@@ -2,8 +2,9 @@ import { Fragment, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import * as admin from '../../api/directory'
 import type { Category, VerificationRequest } from '../../api/types'
-import { Badge, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
 import { labelOf, VERIFICATION_TYPES } from '../../constants/options'
+import { useRunning } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDate, formatDateTime } from '../../utils/format'
@@ -63,16 +64,19 @@ function RequestCard({ request, onReviewed }: { request: VerificationRequest; on
   const [showDocuments, setShowDocuments] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
+  const [running, run] = useRunning()
   const typeInfo = VERIFICATION_TYPES.find((t) => t.value === request.verificationType)
 
   async function review(status: string) {
     setError('')
-    try {
-      await admin.adminReviewVerification(request.id, { status, rejectionReason: reason })
-      onReviewed()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(status, async () => {
+      try {
+        await admin.adminReviewVerification(request.id, { status, rejectionReason: reason })
+        onReviewed()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -91,13 +95,13 @@ function RequestCard({ request, onReviewed }: { request: VerificationRequest; on
 
       {request.status === 'PENDING' ? (
         <div className={ui.actionRow}>
-          <button type="button" className={ui.btnPrimary} onClick={() => review('VERIFIED')}>
+          <BusyButton className={ui.btnPrimary} busy={running === 'VERIFIED'} disabled={running !== ''} onClick={() => review('VERIFIED')}>
             Approve
-          </button>
+          </BusyButton>
           <input className={ui.rowInput} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (needed to reject)" />
-          <button type="button" className={ui.btnGhost} onClick={() => review('REJECTED')}>
+          <BusyButton className={ui.btnGhost} busy={running === 'REJECTED'} disabled={running !== ''} onClick={() => review('REJECTED')}>
             Reject
-          </button>
+          </BusyButton>
         </div>
       ) : (
         <div className={ui.actionRow}>
@@ -144,20 +148,23 @@ function CategoriesTab() {
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState('')
   const [actionError, setActionError] = useState('')
+  const [running, run] = useRunning()
 
-  async function act(action: () => Promise<unknown>) {
+  async function act(name: string, action: () => Promise<unknown>) {
     setActionError('')
-    try {
-      await action()
-      reload()
-    } catch (err) {
-      setActionError((err as Error).message)
-    }
+    await run(name, async () => {
+      try {
+        await action()
+        reload()
+      } catch (err) {
+        setActionError((err as Error).message)
+      }
+    })
   }
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
-    await act(() => admin.adminCreateCategory({ categoryName: name, parentCategoryId: parentId || null, status: 'ACTIVE' }))
+    await act('add', () => admin.adminCreateCategory({ categoryName: name, parentCategoryId: parentId || null, status: 'ACTIVE' }))
     setName('')
   }
 
@@ -177,9 +184,9 @@ function CategoriesTab() {
             </option>
           ))}
         </select>
-        <button type="submit" className={ui.btnPrimary} disabled={!name.trim()}>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!name.trim()} busy={running === 'add'} busyLabel="Adding…">
           Add category
-        </button>
+        </BusyButton>
       </form>
       <ErrorBox message={actionError} />
 
@@ -187,9 +194,9 @@ function CategoriesTab() {
         <EmptyState
           text="No categories yet."
           action={
-            <button type="button" className={ui.btnPrimary} onClick={() => act(admin.adminLoadDefaultCategories)}>
+            <BusyButton className={ui.btnPrimary} busy={running === 'defaults'} busyLabel="Loading…" onClick={() => act('defaults', admin.adminLoadDefaultCategories)}>
               Load starter categories
-            </button>
+            </BusyButton>
           }
         />
       ) : (
@@ -214,23 +221,29 @@ function CategoryRow({ category, onChanged, onError }: { category: Category; onC
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(category.categoryName)
 
-  async function run(action: () => Promise<unknown>) {
+  const [running, start] = useRunning()
+
+  async function run(action: () => Promise<unknown>, name = 'delete') {
     onError('')
-    try {
-      await action()
-      setEditing(false)
-      onChanged()
-    } catch (err) {
-      onError((err as Error).message)
-    }
+    await start(name, async () => {
+      try {
+        await action()
+        setEditing(false)
+        onChanged()
+      } catch (err) {
+        onError((err as Error).message)
+      }
+    })
   }
   const save = (changes: Partial<Category>) =>
-    run(() =>
+    run(
+      () =>
       admin.adminUpdateCategory(category.id, {
         categoryName: changes.categoryName ?? category.categoryName,
         parentCategoryId: category.parentCategoryId,
         status: changes.status ?? category.status,
       }),
+      changes.status ? 'status' : 'rename',
     )
 
   return (
@@ -238,9 +251,9 @@ function CategoryRow({ category, onChanged, onError }: { category: Category; onC
       {editing ? (
         <>
           <input className={ui.inputSmall} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          <button type="button" className={ui.link} onClick={() => save({ categoryName: name })}>
+          <BusyButton className={ui.link} busy={running === 'rename'} onClick={() => save({ categoryName: name })}>
             Save
-          </button>
+          </BusyButton>
           <button type="button" className={ui.link} onClick={() => setEditing(false)}>
             Cancel
           </button>
@@ -252,9 +265,9 @@ function CategoryRow({ category, onChanged, onError }: { category: Category; onC
           <button type="button" className={ui.link} onClick={() => setEditing(true)}>
             Rename
           </button>
-          <button type="button" className={ui.link} onClick={() => save({ status: category.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}>
+          <BusyButton className={ui.link} busy={running === 'status'} onClick={() => save({ status: category.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}>
             {category.status === 'ACTIVE' ? 'Hide' : 'Show'}
-          </button>
+          </BusyButton>
           <ConfirmButton label="Delete" onConfirm={() => run(() => admin.adminDeleteCategory(category.id))} />
         </>
       )}
@@ -323,10 +336,12 @@ function BusinessesTab() {
 
 function BusinessCertifications({ businessId }: { businessId: string }) {
   const { data: certifications, error, reload } = useLoad(() => admin.adminListCertifications(businessId), [businessId])
-  const setStatus = async (certId: string, status: string) => {
-    await admin.adminSetCertificationStatus(businessId, certId, status)
-    reload()
-  }
+  const [running, run] = useRunning()
+  const setStatus = (certId: string, status: string) =>
+    run(`${certId}:${status}`, async () => {
+      await admin.adminSetCertificationStatus(businessId, certId, status)
+      reload()
+    })
 
   if (!certifications) return error ? <ErrorBox message={error} /> : <Loading />
   if (certifications.length === 0) return <p className={ui.hint}>No certifications.</p>
@@ -341,12 +356,12 @@ function BusinessCertifications({ businessId }: { businessId: string }) {
             </a>
           )}{' '}
           <Badge value={c.verificationStatus} />{' '}
-          <button type="button" className={ui.link} onClick={() => setStatus(c.id, 'VERIFIED')}>
+          <BusyButton className={ui.link} busy={running === `${c.id}:VERIFIED`} disabled={running !== ''} onClick={() => setStatus(c.id, 'VERIFIED')}>
             Verify
-          </button>{' '}
-          <button type="button" className={ui.linkDanger} onClick={() => setStatus(c.id, 'REJECTED')}>
+          </BusyButton>{' '}
+          <BusyButton className={ui.linkDanger} busy={running === `${c.id}:REJECTED`} disabled={running !== ''} onClick={() => setStatus(c.id, 'REJECTED')}>
             Reject
-          </button>
+          </BusyButton>
         </li>
       ))}
     </ul>

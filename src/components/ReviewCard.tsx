@@ -4,7 +4,8 @@ import type { Review } from '../api/types'
 import { RATING_DIMENSIONS } from '../constants/options'
 import { cx, ui } from '../styles'
 import { formatDateTime } from '../utils/format'
-import { Badge, ErrorBox, Stars } from './ui'
+import { useBusy } from '../hooks/useBusy'
+import { Badge, BusyButton, ErrorBox, Stars } from './ui'
 
 /** One review. Pass respondAsBusinessId to let that business reply (when it has no reply yet). */
 export default function ReviewCard({
@@ -18,15 +19,18 @@ export default function ReviewCard({
 }) {
   const [response, setResponse] = useState('')
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
 
   async function handleRespond(e: FormEvent) {
     e.preventDefault()
-    try {
-      await respondToReview(respondAsBusinessId!, review.id, response)
-      onResponded?.()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        await respondToReview(respondAsBusinessId!, review.id, response)
+        onResponded?.()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -58,9 +62,9 @@ export default function ReviewCard({
               onChange={(e) => setResponse(e.target.value)}
               placeholder="Write a public reply…"
             />
-            <button type="submit" className={ui.btnGhost} disabled={!response.trim()}>
+            <BusyButton type="submit" className={ui.btnGhost} disabled={!response.trim()} busy={saving}>
               Reply
-            </button>
+            </BusyButton>
           </form>
         )
       )}

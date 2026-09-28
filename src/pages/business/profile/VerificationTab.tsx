@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { documentsApi, listVerificationRequests, submitVerificationRequest } from '../../../api/resources'
 import { useBusiness } from '../../../businessContext'
-import { Badge, EmptyState, ErrorBox, Loading } from '../../../components/ui'
+import { Badge, BusyButton, EmptyState, ErrorBox, Loading } from '../../../components/ui'
 import { labelOf, VERIFICATION_TYPES } from '../../../constants/options'
 import { useLoad } from '../../../hooks/useLoad'
 import { formatDateTime } from '../../../utils/format'
@@ -92,9 +92,9 @@ export default function VerificationTab() {
 
             <ErrorBox message={error} />
             <div className={ui.formActions}>
-              <button type="submit" className={ui.btnPrimary} disabled={saving}>
-                {saving ? 'Submitting…' : 'Submit for review'}
-              </button>
+              <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Submitting…">
+                Submit for review
+              </BusyButton>
             </div>
           </form>
         )}

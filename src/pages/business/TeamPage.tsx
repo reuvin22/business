@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { addMember, listMembers, removeMember, updateMember } from '../../api/businesses'
 import type { Member } from '../../api/types'
 import { useBusiness } from '../../businessContext'
-import { Badge, ConfirmButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { Badge, BusyButton, ConfirmButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { labelOf, MEMBER_ROLES, MEMBER_STATUSES, PERMISSIONS, ROLE_PERMISSIONS } from '../../constants/options'
+import { useBusy } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useAuth } from '../../useAuth'
 import { formatDateTime } from '../../utils/format'
@@ -113,20 +114,23 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('STAFF')
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
   const [message, setMessage] = useState('')
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setMessage('')
-    try {
-      const member = await addMember(business.id, { email, role })
-      setMessage(`${member.displayName || member.email} was added as ${labelOf(member.role)}.`)
-      setEmail('')
-      onAdded()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        const member = await addMember(business.id, { email, role })
+        setMessage(`${member.displayName || member.email} was added as ${labelOf(member.role)}.`)
+        setEmail('')
+        onAdded()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -152,9 +156,9 @@ function AddMemberForm({ onAdded }: { onAdded: () => void }) {
       {message && <p className={ui.alertInfo}>{message}</p>}
       <ErrorBox message={error} />
       <div className={ui.formActions}>
-        <button type="submit" className={ui.btnPrimary} disabled={!email.trim()}>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!email.trim()} busy={saving} busyLabel="Adding…">
           Add member
-        </button>
+        </BusyButton>
       </div>
     </form>
   )
@@ -166,18 +170,21 @@ function EditMemberForm({ member, onDone }: { member: Member; onDone: () => void
   const [permissions, setPermissions] = useState<string[]>(member.permissions)
   const [status, setStatus] = useState(member.status)
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
 
   const togglePermission = (p: string) =>
     setPermissions((list) => (list.includes(p) ? list.filter((x) => x !== p) : [...list, p]))
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    try {
-      await updateMember(business.id, member.id, { role, permissions, status })
-      onDone()
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        await updateMember(business.id, member.id, { role, permissions, status })
+        onDone()
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -227,9 +234,9 @@ function EditMemberForm({ member, onDone }: { member: Member; onDone: () => void
         <button type="button" className={ui.btnGhost} onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className={ui.btnPrimary}>
+        <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
           Save changes
-        </button>
+        </BusyButton>
       </div>
     </form>
   )

@@ -5,7 +5,7 @@ import type { ProductImage } from '../api/types'
 import { cx, ui } from '../styles'
 import { shrinkImage } from '../utils/image'
 import { FormSection } from './FieldForm'
-import { ErrorBox } from './ui'
+import { ErrorBox, Spinner } from './ui'
 
 export type Pair = { name: string; value: string }
 
@@ -122,7 +122,8 @@ export function ImagesEditor({
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className={cx(ui.btnGhost, uploading > 0 && 'pointer-events-none opacity-60')}>
+          <label className={cx(ui.btnGhost, uploading > 0 && 'pointer-events-none opacity-60')} aria-busy={uploading > 0}>
+            {uploading > 0 && <Spinner />}
             {uploading > 0 ? `Uploading ${uploading}…` : '+ Upload image'}
             <input
               type="file"

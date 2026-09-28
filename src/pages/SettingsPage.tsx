@@ -3,7 +3,8 @@ import { sendPasswordResetEmail, updateProfile } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../useAuth'
 import { cx, ui } from '../styles'
-import { PageHeader } from '../components/ui'
+import { BusyButton, PageHeader } from '../components/ui'
+import { useBusy } from '../hooks/useBusy'
 
 export default function SettingsPage() {
   const { user, refresh } = useAuth()
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [sendingReset, runReset] = useBusy()
 
   const usesPassword = user?.providerData.some((p) => p.providerId === 'password')
   const usesGoogle = user?.providerData.some((p) => p.providerId === 'google.com')
@@ -34,12 +36,14 @@ export default function SettingsPage() {
   async function handleResetPassword() {
     setMessage('')
     setError('')
-    try {
-      await sendPasswordResetEmail(auth, user!.email!)
-      setMessage(`Password reset email sent to ${user!.email}.`)
-    } catch {
-      setError('Could not send the reset email. Please try again.')
-    }
+    await runReset(async () => {
+      try {
+        await sendPasswordResetEmail(auth, user!.email!)
+        setMessage(`Password reset email sent to ${user!.email}.`)
+      } catch {
+        setError('Could not send the reset email. Please try again.')
+      }
+    })
   }
 
   return (
@@ -65,13 +69,13 @@ export default function SettingsPage() {
 
         <div className={ui.formActions}>
           {usesPassword && (
-            <button type="button" className={ui.btnGhost} onClick={handleResetPassword}>
+            <BusyButton className={ui.btnGhost} busy={sendingReset} busyLabel="Sending…" onClick={handleResetPassword}>
               Change password
-            </button>
+            </BusyButton>
           )}
-          <button type="submit" className={ui.btnPrimary} disabled={busy}>
-            {busy ? 'Saving…' : 'Save changes'}
-          </button>
+          <BusyButton type="submit" className={ui.btnPrimary} busy={busy} busyLabel="Saving…">
+            Save changes
+          </BusyButton>
         </div>
       </form>
     </div>

@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, setLogLevel } from 'firebase/app'
 import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
@@ -38,3 +38,6 @@ if (isFirebaseConfigured && import.meta.env.VITE_FIREBASE_EMULATORS === 'true') 
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
 }
+
+// No Firebase messages in the browser console (errors still reach our code and are shown on the page)
+setLogLevel('silent')

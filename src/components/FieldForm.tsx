@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import { cx, ui } from '../styles'
-import { ErrorBox } from './ui'
+import { BusyButton, ErrorBox } from './ui'
 
 type Props = {
   title?: string
@@ -64,13 +64,13 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
 
       <div className={ui.formActions}>
         {onCancel && (
-          <button type="button" className={ui.btnGhost} onClick={onCancel}>
+          <button type="button" className={ui.btnGhost} onClick={onCancel} disabled={saving}>
             Cancel
           </button>
         )}
-        <button type="submit" className={ui.btnPrimary} disabled={saving}>
-          {saving ? 'Saving…' : submitLabel}
-        </button>
+        <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
+          {submitLabel}
+        </BusyButton>
       </div>
     </form>
   )

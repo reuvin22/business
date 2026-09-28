@@ -3,9 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { getPublicProfile, listPublicProducts, listPublicReviews } from '../../api/directory'
 import { requestRelationship } from '../../api/network'
 import ReviewCard from '../../components/ReviewCard'
-import { BusinessLogo, EmptyState, ErrorBox, Loading, Stars, Tabs, VerifiedBadge } from '../../components/ui'
+import { BusinessLogo, BusyButton, EmptyState, ErrorBox, Loading, Stars, Tabs, VerifiedBadge } from '../../components/ui'
 import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
 import { useActingBusiness } from '../../hooks/useActingBusiness'
+import { useBusy } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import AboutPanel from './AboutPanel'
@@ -114,17 +115,20 @@ function ConnectForm({ fromBusinessId, toBusinessId }: { fromBusinessId: string;
   const [type, setType] = useState('SUPPLIER')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [saving, run] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setMessage('')
-    try {
-      await requestRelationship(fromBusinessId, { relatedBusinessId: toBusinessId, relationshipType: type, notes: '' })
-      setMessage('Request sent. They will see it on their Network page.')
-    } catch (err) {
-      setError((err as Error).message)
-    }
+    await run(async () => {
+      try {
+        await requestRelationship(fromBusinessId, { relatedBusinessId: toBusinessId, relationshipType: type, notes: '' })
+        setMessage('Request sent. They will see it on their Network page.')
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })
   }
 
   return (
@@ -139,9 +143,9 @@ function ConnectForm({ fromBusinessId, toBusinessId }: { fromBusinessId: string;
           ))}
         </select>
       </label>
-      <button type="submit" className={ui.btnGhost}>
+      <BusyButton type="submit" className={ui.btnGhost} busy={saving}>
         Connect
-      </button>
+      </BusyButton>
       {message && <span className={ui.hint}>{message}</span>}
       {error && <span className="text-[0.85rem] text-danger">{error}</span>}
     </form>

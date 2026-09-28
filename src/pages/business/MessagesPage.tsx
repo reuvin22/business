@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getPublicProfile } from '../../api/directory'
 import * as network from '../../api/network'
 import { useBusiness } from '../../businessContext'
-import { EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { BusyButton, EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { useLoad } from '../../hooks/useLoad'
 import { formatDateTime, initials } from '../../utils/format'
 import { cx, ui } from '../../styles'
@@ -205,9 +205,9 @@ function Composer({ onSend }: { onSend: (text: string) => Promise<void> }) {
             }
           }}
         />
-        <button type="submit" className={ui.btnPrimary} disabled={sending || !text.trim()}>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!text.trim()} busy={sending}>
           Send
-        </button>
+        </BusyButton>
       </div>
     </form>
   )
