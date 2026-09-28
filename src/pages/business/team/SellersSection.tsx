@@ -25,7 +25,8 @@ export default function SellersSection() {
   const [actionError, setActionError] = useState('')
   const canManage = can('members.manage')
 
-  const storeName = (id: string | null | undefined) =>
+  // The store is shown as the business name, then which of its locations
+  const locationName = (id: string | null | undefined) =>
     id ? (locations.find((l) => l.id === id)?.locationName ?? 'Deleted location') : 'Any location'
 
   async function remove(seller: Member) {
@@ -113,7 +114,10 @@ export default function SellersSection() {
                     {s.displayName || s.email}
                     <div className="text-[0.82rem] text-muted">{s.email}</div>
                   </td>
-                  <td className={ui.td}>{storeName(s.locationId)}</td>
+                  <td className={ui.td}>
+                    <div className={ui.strong}>{business.businessName}</div>
+                    <div className="text-[0.82rem] text-muted">{locationName(s.locationId)}</div>
+                  </td>
                   <td className={ui.td}>
                     <Badge value={s.status} />
                   </td>
@@ -140,14 +144,15 @@ export default function SellersSection() {
 }
 
 function StoreSelect({ locations, value, onChange }: { locations: Location[]; value: string; onChange: (id: string) => void }) {
+  const { business } = useBusiness()
   return (
     <label className={ui.label}>
       Store
       <select className={ui.input} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Any location (they choose)</option>
+        <option value="">{business.businessName} — any location (they choose)</option>
         {locations.map((l) => (
           <option key={l.id} value={l.id}>
-            {l.locationName}
+            {business.businessName} — {l.locationName}
           </option>
         ))}
       </select>
