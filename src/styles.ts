@@ -48,6 +48,10 @@ export const ui = {
   // (not the screen's), so the number of columns fits the space the form really has.
   formCard:
     '@container mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-[10px] border border-line bg-surface p-6 max-sm:p-4',
+  /** A form inside a Modal: same layout as formCard, without its own border and background */
+  modalForm: '@container flex w-full flex-col gap-4 p-6 max-sm:p-4',
+  modalActions:
+    'sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-end gap-2.5 rounded-b-xl border-t border-line bg-surface px-6 py-3.5 max-sm:-mx-4 max-sm:-mb-4 max-sm:px-4',
   // 1 column on phones, then 2, 3, and 4 as the form gets wider
   formGrid: 'grid grid-cols-1 gap-x-4 gap-y-3.5 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4',
   formGrid3: 'grid grid-cols-1 gap-x-4 gap-y-3.5 @sm:grid-cols-2 @2xl:grid-cols-3',

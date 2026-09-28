@@ -5,7 +5,7 @@ import * as network from '../../api/network'
 import type { RelationshipView } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import ReviewCard from '../../components/ReviewCard'
-import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, PageHeader, Stars, Tabs } from '../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, Modal, PageHeader, Stars, Tabs } from '../../components/ui'
 import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
 import { useBusy, useRunning } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
@@ -185,48 +185,50 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form className={ui.formCard} onSubmit={handleSubmit}>
-      <h2 className={ui.h2}>Add relationship</h2>
-      <div className={ui.formGrid}>
-        <label className={ui.label}>
-          Business *
-          <select className={ui.input} value={otherId} onChange={(e) => setOtherId(e.target.value)} autoFocus>
-            <option value="">Select…</option>
-            {businesses
-              .filter((b) => b.id !== business.id)
-              .map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.businessName}
-                  {b.primaryCity && ` — ${b.primaryCity}`}
+    <Modal title="Add relationship" onClose={onDone} size="md">
+      <form className={ui.modalForm} onSubmit={handleSubmit}>
+        <h2 className={ui.h2}>Add relationship</h2>
+        <div className={ui.formGrid}>
+          <label className={ui.label}>
+            Business *
+            <select className={ui.input} value={otherId} onChange={(e) => setOtherId(e.target.value)} autoFocus>
+              <option value="">Select…</option>
+              {businesses
+                .filter((b) => b.id !== business.id)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.businessName}
+                    {b.primaryCity && ` — ${b.primaryCity}`}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className={ui.label}>
+            They are our *
+            <select className={ui.input} value={type} onChange={(e) => setType(e.target.value)}>
+              {RELATIONSHIP_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
                 </option>
               ))}
-          </select>
-        </label>
-        <label className={ui.label}>
-          They are our *
-          <select className={ui.input} value={type} onChange={(e) => setType(e.target.value)}>
-            {RELATIONSHIP_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={cx(ui.label, 'col-span-full')}>
-          Notes
-          <input className={ui.input} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Supplies our soft drinks since 2020" />
-        </label>
-      </div>
-      <ErrorBox message={error} />
-      <div className={ui.formActions}>
-        <button type="button" className={ui.btnGhost} onClick={onDone}>
-          Cancel
-        </button>
-        <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Sending…">
-          Send request
-        </BusyButton>
-      </div>
-    </form>
+            </select>
+          </label>
+          <label className={cx(ui.label, 'col-span-full')}>
+            Notes
+            <input className={ui.input} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Supplies our soft drinks since 2020" />
+          </label>
+        </div>
+        <ErrorBox message={error} />
+        <div className={ui.formActions}>
+          <button type="button" className={ui.btnGhost} onClick={onDone}>
+            Cancel
+          </button>
+          <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Sending…">
+            Send request
+          </BusyButton>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

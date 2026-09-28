@@ -44,6 +44,7 @@ export default function ProductForm({ businessId, currency, existing, onSaved, o
       sections={sections}
       initial={start}
       submitLabel={existing ? 'Save changes' : 'Add product'}
+      size="xl"
       onCancel={onCancel}
       onSubmit={async (values) => {
         const body = {

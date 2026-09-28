@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import { cx, ui } from '../styles'
-import { BusyButton, ErrorBox } from './ui'
+import { BusyButton, ErrorBox, Modal } from './ui'
 
 type Props = {
   title?: string
@@ -10,12 +10,15 @@ type Props = {
   submitLabel: string
   /** Gets the API values. If it throws (e.g. an ApiError), the message is shown above the buttons. */
   onSubmit: (values: Values) => Promise<unknown> | void
+  /** Given = the form opens as a dialog (modal) over the page, closed by Cancel. */
   onCancel?: () => void
+  /** Width of the dialog; big forms (e.g. products) use 'xl'. */
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   /** Extra editors shown after the sections (e.g. opening hours). */
   children?: ReactNode
 }
 
-export default function FieldForm({ title, sections, initial, submitLabel, onSubmit, onCancel, children }: Props) {
+export default function FieldForm({ title, sections, initial, submitLabel, onSubmit, onCancel, size = 'lg', children }: Props) {
   const [state, setState] = useState<FormState>(() => toFormState(sections, initial))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -38,8 +41,8 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
     }
   }
 
-  return (
-    <form className={ui.formCard} onSubmit={handleSubmit} noValidate>
+  const form = (
+    <form className={onCancel ? ui.modalForm : ui.formCard} onSubmit={handleSubmit} noValidate>
       {title && <h2 className={ui.h2}>{title}</h2>}
 
       {sections.map((section, sectionIndex) => (
@@ -62,7 +65,8 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
 
       <ErrorBox message={error} />
 
-      <div className={ui.formActions}>
+      {/* In a dialog, the buttons stay at the bottom of the screen while a long form scrolls */}
+      <div className={onCancel ? ui.modalActions : ui.formActions}>
         {onCancel && (
           <button type="button" className={ui.btnGhost} onClick={onCancel} disabled={saving}>
             Cancel
@@ -73,6 +77,14 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
         </BusyButton>
       </div>
     </form>
+  )
+
+  if (!onCancel) return form
+  // A click outside does not close it: a long form is easy to lose by accident. Cancel or Escape do.
+  return (
+    <Modal title={title ?? submitLabel} onClose={saving ? () => {} : onCancel} size={size} closeOnBackdrop={false}>
+      {form}
+    </Modal>
   )
 }
 

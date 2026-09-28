@@ -72,25 +72,6 @@ export default function ProductDetailPage() {
     categoryOptions(categories),
   )
 
-  if (editing) {
-    return (
-      <div className={ui.page}>
-        {backLink}
-        <ProductForm
-          key={product.updatedAt}
-          businessId={business.id}
-          currency={business.currency}
-          existing={full.data}
-          onCancel={() => setEditing(false)}
-          onSaved={() => {
-            setEditing(false)
-            full.reload()
-          }}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className={ui.page}>
       {backLink}
@@ -252,6 +233,20 @@ export default function ProductDetailPage() {
         </div>
         <StockHistoryTable movements={history.slice(0, HISTORY_ON_PAGE)} showProduct={false} />
       </section>
+
+      {editing && (
+        <ProductForm
+          key={product.updatedAt}
+          businessId={business.id}
+          currency={business.currency}
+          existing={full.data}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false)
+            full.reload()
+          }}
+        />
+      )}
 
       {canEdit && (
         <section className={cx(ui.dangerZone, 'mt-4')}>

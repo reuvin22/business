@@ -3,7 +3,7 @@ import { createSeller, listSellers, removeSeller, setSellerPassword, updateSelle
 import { locationsApi } from '../../../api/resources'
 import type { Location, Member } from '../../../api/types'
 import { useBusiness } from '../../../businessContext'
-import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading } from '../../../components/ui'
+import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, Modal } from '../../../components/ui'
 import { MEMBER_STATUSES } from '../../../constants/options'
 import { useBusy } from '../../../hooks/useBusy'
 import { useLoad } from '../../../hooks/useLoad'
@@ -187,37 +187,39 @@ function CreateSellerForm({
   }
 
   return (
-    <form className={ui.formCard} onSubmit={handleSubmit}>
-      <h2 className={ui.h2}>Create a seller account</h2>
-      <p className={ui.hint}>
-        Give the seller this email and password; they sign in to the selling app with it. If the email already has an
-        account, that account is used and keeps its own password.
-      </p>
-      <div className={ui.formGrid}>
-        <label className={ui.label}>
-          Name *
-          <input className={ui.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ana Santos" autoFocus />
-        </label>
-        <label className={ui.label}>
-          Email *
-          <input className={ui.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ana@email.com" />
-        </label>
-        <label className={ui.label}>
-          Password * (6+ characters)
-          <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
-        <StoreSelect locations={locations} value={locationId} onChange={setLocationId} />
-      </div>
-      <ErrorBox message={error} />
-      <div className={ui.formActions}>
-        <button type="button" className={ui.btnGhost} onClick={onCancel}>
-          Cancel
-        </button>
-        <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim() || !email.trim() || password.length < 6} busy={saving} busyLabel="Creating…">
-          Create account
-        </BusyButton>
-      </div>
-    </form>
+    <Modal title="Create a seller account" onClose={onCancel} size="md">
+      <form className={ui.modalForm} onSubmit={handleSubmit}>
+        <h2 className={ui.h2}>Create a seller account</h2>
+        <p className={ui.hint}>
+          Give the seller this email and password; they sign in to the selling app with it. If the email already has an
+          account, that account is used and keeps its own password.
+        </p>
+        <div className={ui.formGrid}>
+          <label className={ui.label}>
+            Name *
+            <input className={ui.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ana Santos" autoFocus />
+          </label>
+          <label className={ui.label}>
+            Email *
+            <input className={ui.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ana@email.com" />
+          </label>
+          <label className={ui.label}>
+            Password * (6+ characters)
+            <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          <StoreSelect locations={locations} value={locationId} onChange={setLocationId} />
+        </div>
+        <ErrorBox message={error} />
+        <div className={ui.formActions}>
+          <button type="button" className={ui.btnGhost} onClick={onCancel}>
+            Cancel
+          </button>
+          <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim() || !email.trim() || password.length < 6} busy={saving} busyLabel="Creating…">
+            Create account
+          </BusyButton>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -243,36 +245,38 @@ function EditSellerForm({ seller, locations, onDone }: { seller: Member; locatio
   }
 
   return (
-    <form className={ui.formCard} onSubmit={handleSubmit}>
-      <h2 className={ui.h2}>Edit {seller.displayName || seller.email}</h2>
-      <div className={ui.formGrid}>
-        <label className={ui.label}>
-          Name *
-          <input className={ui.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        </label>
-        <StoreSelect locations={locations} value={locationId} onChange={setLocationId} />
-        <label className={ui.label}>
-          Status
-          <select className={ui.input} value={status} onChange={(e) => setStatus(e.target.value)}>
-            {MEMBER_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <p className={ui.hint}>A suspended seller cannot sign in to the selling app until you make them active again.</p>
-      <ErrorBox message={error} />
-      <div className={ui.formActions}>
-        <button type="button" className={ui.btnGhost} onClick={onDone}>
-          Cancel
-        </button>
-        <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim()} busy={saving} busyLabel="Saving…">
-          Save changes
-        </BusyButton>
-      </div>
-    </form>
+    <Modal title={`Edit ${seller.displayName || seller.email}`} onClose={onDone} size="md">
+      <form className={ui.modalForm} onSubmit={handleSubmit}>
+        <h2 className={ui.h2}>Edit {seller.displayName || seller.email}</h2>
+        <div className={ui.formGrid}>
+          <label className={ui.label}>
+            Name *
+            <input className={ui.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </label>
+          <StoreSelect locations={locations} value={locationId} onChange={setLocationId} />
+          <label className={ui.label}>
+            Status
+            <select className={ui.input} value={status} onChange={(e) => setStatus(e.target.value)}>
+              {MEMBER_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className={ui.hint}>A suspended seller cannot sign in to the selling app until you make them active again.</p>
+        <ErrorBox message={error} />
+        <div className={ui.formActions}>
+          <button type="button" className={ui.btnGhost} onClick={onDone}>
+            Cancel
+          </button>
+          <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim()} busy={saving} busyLabel="Saving…">
+            Save changes
+          </BusyButton>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -297,29 +301,31 @@ function PasswordForm({ seller, onDone }: { seller: Member; onDone: () => void }
   }
 
   return (
-    <form className={ui.formCard} onSubmit={handleSubmit}>
-      <h2 className={ui.h2}>New password for {seller.displayName || seller.email}</h2>
-      {saved ? (
-        <p className={ui.alertInfo}>Password changed. Give the seller the new password.</p>
-      ) : (
-        <div className={ui.formGrid}>
-          <label className={ui.label}>
-            New password * (6+ characters)
-            <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
-          </label>
-        </div>
-      )}
-      <ErrorBox message={error} />
-      <div className={ui.formActions}>
-        <button type="button" className={ui.btnGhost} onClick={onDone}>
-          {saved ? 'Close' : 'Cancel'}
-        </button>
-        {!saved && (
-          <BusyButton type="submit" className={ui.btnPrimary} disabled={password.length < 6} busy={saving} busyLabel="Saving…">
-            Set password
-          </BusyButton>
+    <Modal title="New password" onClose={onDone}>
+      <form className={ui.modalForm} onSubmit={handleSubmit}>
+        <h2 className={ui.h2}>New password for {seller.displayName || seller.email}</h2>
+        {saved ? (
+          <p className={ui.alertInfo}>Password changed. Give the seller the new password.</p>
+        ) : (
+          <div className={ui.formGrid}>
+            <label className={ui.label}>
+              New password * (6+ characters)
+              <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+            </label>
+          </div>
         )}
-      </div>
-    </form>
+        <ErrorBox message={error} />
+        <div className={ui.formActions}>
+          <button type="button" className={ui.btnGhost} onClick={onDone}>
+            {saved ? 'Close' : 'Cancel'}
+          </button>
+          {!saved && (
+            <BusyButton type="submit" className={ui.btnPrimary} disabled={password.length < 6} busy={saving} busyLabel="Saving…">
+              Set password
+            </BusyButton>
+          )}
+        </div>
+      </form>
+    </Modal>
   )
 }

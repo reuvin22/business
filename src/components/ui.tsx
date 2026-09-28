@@ -47,11 +47,27 @@ export function BusyButton({
   )
 }
 
+const MODAL_WIDTHS = { sm: 'max-w-lg', md: 'max-w-3xl', lg: 'max-w-5xl', xl: 'max-w-7xl' }
+
 /**
- * A dialog over the page. Closes with Escape, the backdrop, or `onClose`.
+ * A dialog over the page, so forms never push the page around. Closes with Escape or `onClose`
+ * (and a click outside, unless `closeOnBackdrop` is false, e.g. for long forms).
  * Drawn at the end of <body> (a "portal"), so it is never cut off by the page layout.
+ * Tall content scrolls inside the dark overlay.
  */
-export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  size = 'sm',
+  closeOnBackdrop = true,
+}: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+  size?: keyof typeof MODAL_WIDTHS
+  closeOnBackdrop?: boolean
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -64,12 +80,16 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
   }, [onClose])
 
   return createPortal(
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/45 p-4" onMouseDown={onClose}>
+    // flex + my-auto: centered when it fits, scrolls from the top when it is taller than the screen
+    <div
+      className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/45 p-4 sm:p-8"
+      onMouseDown={closeOnBackdrop ? onClose : undefined}
+    >
       <div
         role="dialog"
         aria-modal
         aria-label={title}
-        className={cx('w-full rounded-xl bg-surface shadow-xl', wide ? 'max-w-3xl' : 'max-w-lg')}
+        className={cx('my-auto w-full rounded-xl bg-surface shadow-xl', MODAL_WIDTHS[size])}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {children}
