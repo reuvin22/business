@@ -1,8 +1,8 @@
 import { upload } from './client'
 import type { MediaType } from './types'
 
-/** Where a file belongs: a product photo/video, or the business's own logo/cover. Each has its own folder. */
-export type ImageKind = 'product' | 'business'
+/** Where a file belongs: a product photo/video, the business's own logo/cover, or a photo sent in a chat. */
+export type ImageKind = 'product' | 'business' | 'chat'
 
 /** The largest file the server takes (each image or video). */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024

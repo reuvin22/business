@@ -519,6 +519,8 @@ export type ChatMessage = {
   businessName: string
   businessLogo: string
   message: string
+  /** Photos */
+  attachments?: string[]
   createdAt: number
 }
 
@@ -529,6 +531,8 @@ export type LiveMessage = {
   senderName: string
   senderBusinessId: string
   message: string
+  /** Photos */
+  attachments?: string[]
   order?: OrderCard
   createdAt: number
 }

@@ -6,9 +6,10 @@ import type { ChatAccess, ChatMessage } from './types'
 
 /** Lets you read this business's chats live, and says where they are. Call it before listening. */
 export const getChatAccess = (businessId: string) => get<ChatAccess>(`/businesses/${businessId}/chat`, { fresh: true })
-export const sendTeamMessage = (businessId: string, message: string) =>
-  post<ChatMessage>(`/businesses/${businessId}/chat/team/messages`, { message })
-export const sendMarketMessage = (businessId: string, message: string) =>
-  post<ChatMessage>(`/businesses/${businessId}/chat/market/messages`, { message })
+/** attachments: photo links (uploaded with kind 'chat') */
+export const sendTeamMessage = (businessId: string, message: string, attachments: string[] = []) =>
+  post<ChatMessage>(`/businesses/${businessId}/chat/team/messages`, { message, attachments })
+export const sendMarketMessage = (businessId: string, message: string, attachments: string[] = []) =>
+  post<ChatMessage>(`/businesses/${businessId}/chat/market/messages`, { message, attachments })
 export const deleteMarketMessage = (businessId: string, messageId: string) =>
   del(`/businesses/${businessId}/chat/market/messages/${messageId}`)

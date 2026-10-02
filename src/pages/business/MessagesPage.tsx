@@ -5,11 +5,13 @@ import { getPublicProfile } from '../../api/directory'
 import * as network from '../../api/network'
 import type { ChatAccess, ChatMessage, LiveMessage, OrderCard } from '../../api/types'
 import { useBusiness } from '../../businessContext'
-import { Badge, BusyButton, EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { uploadImage } from '../../api/uploads'
+import { Badge, BusyButton, EmptyState, ErrorBox, Loading, PageHeader, Spinner } from '../../components/ui'
 import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { useRealtimeMessages, useRealtimeValue } from '../../hooks/useRealtime'
 import { formatDateTime, formatMoney, initials } from '../../utils/format'
+import { shrinkImage } from '../../utils/image'
 import { cx, ui } from '../../styles'
 
 // The conversation list (who wrote last, unread dots) is checked this often. The messages
@@ -51,7 +53,7 @@ export default function MessagesPage() {
       <PageHeader title="Messages" subtitle="Your team, the market, and businesses you work with. Messages arrive live." />
       <ErrorBox message={access.error || conversations.error} />
 
-      <div className={cx(ui.card, 'grid h-[calc(100vh-200px)] min-h-105 grid-cols-[280px_1fr] overflow-hidden p-0 max-md:h-auto max-md:grid-cols-1 max-sm:p-0')}>
+      <div className={cx(ui.card, 'grid h-[calc(100vh-200px)] min-h-105 grid-cols-[280px_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden p-0 max-md:h-auto max-md:grid-cols-1 max-md:grid-rows-none max-sm:p-0')}>
         <aside className="flex flex-col overflow-y-auto border-r border-line max-md:max-h-60 max-md:border-r-0 max-md:border-b">
           <SidebarHeading>Channels</SidebarHeading>
           <SidebarItem active={selected === 'team'} onClick={() => select('team')} badge="#" title="Team" subtitle={`Only ${business.businessName}`} />
@@ -77,7 +79,7 @@ export default function MessagesPage() {
           )}
         </aside>
 
-        <section className="flex min-w-0 flex-col">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           {!access.data ? (
             access.error ? <EmptyState text="Messages are not available right now." /> : <Loading />
           ) : selected === 'team' || selected === 'market' ? (
@@ -172,6 +174,7 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
               key={m.id}
               mine={mine}
               text={m.message}
+              photos={m.attachments}
               footer={
                 <>
                   {channel === 'market' ? (
@@ -204,8 +207,10 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
       {canPost ? (
         <Composer
           placeholder={channel === 'team' ? 'Message your team…' : 'Share an offer with every business…'}
-          onSend={async (text) => {
-            await (channel === 'team' ? chat.sendTeamMessage(business.id, text) : chat.sendMarketMessage(business.id, text))
+          onSend={async (text, photos) => {
+            await (channel === 'team'
+              ? chat.sendTeamMessage(business.id, text, photos)
+              : chat.sendMarketMessage(business.id, text, photos))
           }}
         />
       ) : (
@@ -257,6 +262,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
               key={m.id}
               mine={mine}
               text={m.message}
+              photos={m.attachments}
               order={m.order ?? undefined}
               footer={
                 <>
@@ -270,8 +276,8 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
       </MessageList>
       {canSend ? (
         <Composer
-          onSend={async (text) => {
-            await network.sendMessage(business.id, conversationId, text)
+          onSend={async (text, photos) => {
+            await network.sendMessage(business.id, conversationId, { message: text, attachments: photos })
             onChange()
           }}
         />
@@ -297,8 +303,12 @@ function NewConversation({ toBusinessId, canSend, onStarted }: { toBusinessId: s
       </div>
       {canSend && (
         <Composer
-          onSend={async (text) => {
-            const conversation = await network.startConversation(business.id, { participantBusinessId: toBusinessId, message: text })
+          onSend={async (text, photos) => {
+            const conversation = await network.startConversation(business.id, {
+              participantBusinessId: toBusinessId,
+              message: text,
+              attachments: photos,
+            })
             onStarted(conversation.id)
           }}
         />
@@ -317,14 +327,26 @@ function MessageList({ count, loading, empty, children }: { count: number | unde
   }, [count])
 
   return (
-    <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4 max-md:max-h-[55vh]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4 max-md:max-h-[55vh]">
       {loading ? <Loading /> : count === 0 ? <p className={cx(ui.hint, 'm-0 p-4')}>{empty}</p> : children}
       <div ref={bottom} />
     </div>
   )
 }
 
-function Bubble({ mine, text, footer, order }: { mine: boolean; text: string; footer: ReactNode; order?: OrderCard }) {
+function Bubble({
+  mine,
+  text,
+  footer,
+  order,
+  photos = [],
+}: {
+  mine: boolean
+  text: string
+  footer: ReactNode
+  order?: OrderCard
+  photos?: string[]
+}) {
   return (
     <div
       className={cx(
@@ -333,25 +355,70 @@ function Bubble({ mine, text, footer, order }: { mine: boolean; text: string; fo
       )}
     >
       {order && <OrderCardView card={order} />}
-      <p className="whitespace-pre-line text-heading">{text}</p>
+      {photos.length > 0 && (
+        <div className={cx('grid gap-1.5', photos.length > 1 && 'grid-cols-2')}>
+          {photos.map((url) => (
+            <a key={url} href={url} target="_blank" rel="noreferrer" title="Open the photo">
+              <img
+                src={url}
+                alt=""
+                loading="lazy"
+                className={cx('block w-full rounded-lg bg-surface object-cover', photos.length > 1 ? 'aspect-square' : 'max-h-72')}
+              />
+            </a>
+          ))}
+        </div>
+      )}
+      {text && <p className="whitespace-pre-line text-heading">{text}</p>}
       <span className="mt-1 block text-[0.72rem] text-muted">{footer}</span>
     </div>
   )
 }
 
-function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (text: string) => Promise<void>; placeholder?: string }) {
+const MAX_PHOTOS = 4 // in one message (the server checks too)
+
+function Composer({
+  onSend,
+  placeholder = 'Write a message…',
+}: {
+  onSend: (text: string, photos: string[]) => Promise<void>
+  placeholder?: string
+}) {
+  const { business } = useBusiness()
   const [text, setText] = useState('')
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(0)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  const canSend = (text.trim() !== '' || photos.length > 0) && uploading === 0
+
+  async function addPhotos(files: File[]) {
+    const room = MAX_PHOTOS - photos.length
+    if (files.length > room) setError(`Up to ${MAX_PHOTOS} photos in one message.`)
+    const chosen = files.slice(0, Math.max(room, 0))
+    setUploading((n) => n + chosen.length)
+    for (const file of chosen) {
+      try {
+        const { blob, name } = await shrinkImage(file) // smaller and faster to send
+        const url = await uploadImage(business.id, blob, name, 'chat')
+        setPhotos((list) => [...list, url])
+      } catch (err) {
+        setError(`${file.name}: ${(err as Error).message}`)
+      } finally {
+        setUploading((n) => n - 1)
+      }
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!text.trim()) return
+    if (!canSend) return
     setError('')
     setSending(true)
     try {
-      await onSend(text.trim())
+      await onSend(text.trim(), photos)
       setText('')
+      setPhotos([])
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -360,9 +427,55 @@ function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (tex
   }
 
   return (
-    <form className="flex flex-col gap-2 border-t border-line px-3.5 py-3" onSubmit={handleSubmit}>
+    <form className="flex shrink-0 flex-col gap-2 border-t border-line px-3.5 py-3" onSubmit={handleSubmit}>
       <ErrorBox message={error} />
+      {(photos.length > 0 || uploading > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {photos.map((url) => (
+            <span key={url} className="relative">
+              <img src={url} alt="" className="size-16 rounded-lg bg-chip object-cover" />
+              <button
+                type="button"
+                onClick={() => setPhotos((list) => list.filter((p) => p !== url))}
+                className="absolute -top-1.5 -right-1.5 grid size-5 cursor-pointer place-items-center rounded-full border-0 bg-heading text-[0.7rem] text-surface"
+                aria-label="Remove this photo"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+          {Array.from({ length: uploading }, (_, i) => (
+            <span key={`uploading-${i}`} className="grid size-16 place-items-center rounded-lg bg-chip">
+              <Spinner />
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex items-end gap-2.5">
+        <label
+          className={cx(
+            'grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg border border-line text-muted hover:border-accent hover:text-accent',
+            photos.length + uploading >= MAX_PHOTOS && 'pointer-events-none opacity-40',
+          )}
+          title="Add photos"
+        >
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          <span className="sr-only">Add photos</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              addPhotos(Array.from(e.target.files ?? []))
+              e.target.value = '' // lets you pick the same photo again
+            }}
+          />
+        </label>
         <textarea
           className={cx(ui.input, 'flex-1 resize-none')}
           rows={2}
@@ -377,7 +490,7 @@ function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (tex
             }
           }}
         />
-        <BusyButton type="submit" className={ui.btnPrimary} disabled={!text.trim()} busy={sending}>
+        <BusyButton type="submit" className={ui.btnPrimary} disabled={!canSend} busy={sending}>
           Send
         </BusyButton>
       </div>
