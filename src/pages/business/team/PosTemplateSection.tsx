@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { posSettingsApi } from '../../../api/resources'
 import type { PosCustomTemplate, PosOrderType, PosTemplate } from '../../../api/types'
 import { useBusiness } from '../../../businessContext'
+import { FormSection } from '../../../components/FieldForm'
 import { BusyButton, ErrorBox, Loading, Modal, Spinner } from '../../../components/ui'
 import { useLoad } from '../../../hooks/useLoad'
 import { cx, ui } from '../../../styles'
@@ -198,6 +199,7 @@ function CustomTemplateForm({
   const [saving, setSaving] = useState(false)
   const set = (changes: Partial<PosCustomTemplate>) => setForm((old) => ({ ...old, ...changes }))
   const dineIn = form.orderTypes.includes('DINE_IN')
+  const isList = form.layout === 'list'
 
   function toggleOrderType(type: PosOrderType) {
     const orderTypes = form.orderTypes.includes(type) ? form.orderTypes.filter((t) => t !== type) : [...form.orderTypes, type]
@@ -205,7 +207,8 @@ function CustomTemplateForm({
     set({ orderTypes: ORDER_TYPES.map((t) => t.value).filter((t) => orderTypes.includes(t)) })
   }
 
-  async function submit() {
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
     setError('')
     setSaving(true)
     try {
@@ -217,112 +220,185 @@ function CustomTemplateForm({
     }
   }
 
-  const check = (label: string, hint: string, checked: boolean, onChange: (value: boolean) => void, disabled = false) => (
-    <label className={cx(ui.checkboxLabel, 'items-start', disabled && 'opacity-50')}>
-      <input type="checkbox" className={cx(ui.checkbox, 'mt-0.5')} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span>
-        <span className="font-semibold text-heading">{label}</span>
-        <span className={cx(ui.hint, 'block')}>{hint}</span>
-      </span>
-    </label>
-  )
-
   return (
-    <Modal title="Customize your own" onClose={saving ? () => {} : onClose} size="lg">
-      <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className={ui.label}>
-            Name
-            <input className={ui.input} value={form.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Milk tea shop" />
-          </label>
-          <label className={ui.label}>
-            Start from
-            <select
-              className={ui.input}
-              value=""
-              onChange={(e) => {
-                const preset = BUILT_IN.find((t) => t.value === e.target.value)
-                if (preset) set(preset.switches)
-              }}
-            >
-              <option value="">Copy the switches of…</option>
-              {BUILT_IN.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
+    <Modal title="Customize your own" onClose={saving ? () => {} : onClose} size="lg" closeOnBackdrop={false}>
+      <form className={ui.modalForm} onSubmit={handleSubmit}>
+        <div>
+          <h2 className={ui.h2}>Customize your own</h2>
+          <p className={ui.hint}>Switch each feature on or off. Your products, prices, and stock stay the same; only the till changes.</p>
         </div>
 
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="mb-2 font-bold text-heading">How products look</legend>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Layout">
-            {(
-              [
-                ['tiles', 'Tiles', 'Big buttons, good for touch screens'],
-                ['list', 'List', 'Compact rows, good for many products and scanning'],
-              ] as const
-            ).map(([value, label, hint]) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={form.layout === value}
-                onClick={() => set({ layout: value })}
-                className={cx(
-                  'flex flex-1 cursor-pointer flex-col rounded-lg border px-3 py-2 text-left',
-                  form.layout === value ? 'border-accent bg-info-soft' : 'border-line bg-surface hover:border-muted',
-                )}
+        <FormSection title="Template">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 @lg:grid-cols-2">
+            <label className={ui.label}>
+              Name
+              <input className={ui.input} value={form.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Milk tea shop" />
+            </label>
+            <label className={ui.label}>
+              Start from
+              <select
+                className={ui.input}
+                value=""
+                onChange={(e) => {
+                  const preset = BUILT_IN.find((t) => t.value === e.target.value)
+                  if (preset) set(preset.switches)
+                }}
               >
-                <span className="font-semibold text-heading">{label}</span>
-                <span className={ui.hint}>{hint}</span>
-              </button>
-            ))}
+                <option value="">Copy the switches of…</option>
+                {BUILT_IN.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          {check('Product photos', 'Otherwise big names, like a menu board.', form.photos, (photos) => set({ photos }), form.layout === 'list')}
-          {check('Category tabs', 'A tab per product category, like a menu.', form.categoryTabs, (categoryTabs) => set({ categoryTabs }))}
-          {check(
-            'Size / variant buttons',
-            'One card per product with a button per variant (e.g. Small, Medium, Large).',
-            form.variantButtons,
-            (variantButtons) => set({ variantButtons }),
-            form.layout === 'list',
-          )}
-          {check(
-            'Show stock only when it runs low',
-            'Otherwise every product shows how many are left.',
-            form.stock === 'low',
-            (low) => set({ stock: low ? 'low' : 'always' }),
-          )}
-          {check('Ready for the next scan', 'After a tap or scan, the search box is ready for the next barcode.', form.scanFirst, (scanFirst) => set({ scanFirst }))}
-        </fieldset>
+        </FormSection>
 
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="mb-2 font-bold text-heading">What the seller asks</legend>
-          <div className="flex flex-wrap gap-4">
-            {ORDER_TYPES.map((type) => (
-              <label key={type.value} className={ui.checkboxLabel}>
-                <input type="checkbox" className={ui.checkbox} checked={form.orderTypes.includes(type.value)} onChange={() => toggleOrderType(type.value)} />
-                <span>{type.label}</span>
-              </label>
-            ))}
+        <FormSection title="How products look">
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2" role="radiogroup" aria-label="Layout">
+              <OptionCard
+                type="radio"
+                label="Tiles"
+                hint="Big buttons, good for touch screens."
+                checked={!isList}
+                onChange={() => set({ layout: 'tiles' })}
+              />
+              <OptionCard
+                type="radio"
+                label="List"
+                hint="Compact rows, good for many products and scanning."
+                checked={isList}
+                onChange={() => set({ layout: 'list' })}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
+              <OptionCard
+                label="Product photos"
+                hint={isList ? 'Not used in the list layout.' : 'Otherwise big names, like a menu board.'}
+                checked={form.photos && !isList}
+                disabled={isList}
+                onChange={(photos) => set({ photos })}
+              />
+              <OptionCard
+                label="Category tabs"
+                hint="A tab per product category, like a menu."
+                checked={form.categoryTabs}
+                onChange={(categoryTabs) => set({ categoryTabs })}
+              />
+              <OptionCard
+                label="Size / variant buttons"
+                hint={isList ? 'Not used in the list layout.' : 'One card per product, a button per size (Small, Medium, Large).'}
+                checked={form.variantButtons && !isList}
+                disabled={isList}
+                onChange={(variantButtons) => set({ variantButtons })}
+              />
+              <OptionCard
+                label="Stock only when it runs low"
+                hint="Otherwise every product shows how many are left."
+                checked={form.stock === 'low'}
+                onChange={(low) => set({ stock: low ? 'low' : 'always' })}
+              />
+              <OptionCard
+                label="Ready for the next scan"
+                hint="After a tap or scan, the search box is ready for the next barcode."
+                checked={form.scanFirst}
+                onChange={(scanFirst) => set({ scanFirst })}
+              />
+            </div>
           </div>
-          <p className={cx(ui.hint, 'm-0')}>How the order is served. Leave all empty for a normal shop.</p>
-          {check('Table number', 'Needed for dine-in orders, printed on the receipt.', dineIn && form.tableNumber, (tableNumber) => set({ tableNumber }), !dineIn)}
-          {check("Customer's name", 'To call them when the order is ready, printed on the receipt.', form.customerName, (customerName) => set({ customerName }))}
-        </fieldset>
+        </FormSection>
+
+        <FormSection title="What the seller asks" hint="How the order is served. Leave all off for a normal shop.">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Order types">
+              {ORDER_TYPES.map((type) => {
+                const on = form.orderTypes.includes(type.value)
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleOrderType(type.value)}
+                    className={cx(
+                      'cursor-pointer rounded-full border px-4 py-2 text-[0.9rem] font-semibold',
+                      on ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-heading hover:border-muted',
+                    )}
+                  >
+                    {on ? '✓ ' : '+ '}
+                    {type.label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
+              <OptionCard
+                label="Table number"
+                hint={dineIn ? 'Needed for dine-in orders, printed on the receipt.' : 'Turn on Dine-in to use it.'}
+                checked={dineIn && form.tableNumber}
+                disabled={!dineIn}
+                onChange={(tableNumber) => set({ tableNumber })}
+              />
+              <OptionCard
+                label="Customer's name"
+                hint="To call them when the order is ready, printed on the receipt."
+                checked={form.customerName}
+                onChange={(customerName) => set({ customerName })}
+              />
+            </div>
+          </div>
+        </FormSection>
 
         <ErrorBox message={error} />
-        <div className="flex justify-end gap-2.5">
+        <div className={ui.modalActions}>
           <button type="button" className={ui.btnGhost} onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <BusyButton className={ui.btnPrimary} busy={saving} busyLabel="Saving…" onClick={submit}>
+          <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
             Use this template
           </BusyButton>
         </div>
-      </div>
+      </form>
     </Modal>
+  )
+}
+
+/** A choice as a card: the whole card is clickable, and it is highlighted when on. */
+function OptionCard({
+  label,
+  hint,
+  checked,
+  onChange,
+  disabled = false,
+  type = 'checkbox',
+}: {
+  label: string
+  hint: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+  type?: 'checkbox' | 'radio'
+}) {
+  return (
+    <label
+      className={cx(
+        'flex items-start gap-3 rounded-lg border px-3.5 py-3 transition-colors',
+        disabled ? 'cursor-not-allowed border-line bg-page opacity-60' : 'cursor-pointer hover:border-muted',
+        checked && !disabled ? 'border-accent bg-info-soft' : 'border-line',
+      )}
+    >
+      <input
+        type={type}
+        className={cx(ui.checkbox, 'size-4 shrink-0')}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="font-semibold text-heading">{label}</span>
+        <span className="text-[0.82rem] leading-snug text-muted">{hint}</span>
+      </span>
+    </label>
   )
 }
