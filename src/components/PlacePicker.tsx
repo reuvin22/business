@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { listBarangays, listCities, listCountries, listProvinces, listRegions, type Place } from '../api/geo'
 import { useLoad } from '../hooks/useLoad'
 import { cx, ui } from '../styles'
+import { Spinner } from './ui'
 
 /** Names, as saved (and as typed in addresses). */
 export type PlaceValue = { country: string; region: string; province: string; city: string; barangay: string }
@@ -50,6 +51,7 @@ export default function PlacePicker({ value, onChange }: { value: PlaceValue; on
         label="Country *"
         value={value.country}
         places={countries.data}
+        loading={countries.loading}
         error={countries.error}
         onChange={(country) => set({ country }, ['region', 'province', 'city', 'barangay'])}
       />
@@ -57,6 +59,7 @@ export default function PlacePicker({ value, onChange }: { value: PlaceValue; on
         label={ph ? 'Region' : 'State / region'}
         value={value.region}
         places={regions.data}
+        loading={regions.loading}
         error={regions.error}
         waitingFor={value.country ? '' : 'a country'}
         onChange={(region) => set({ region }, ['province', 'city', 'barangay'])}
@@ -66,6 +69,7 @@ export default function PlacePicker({ value, onChange }: { value: PlaceValue; on
           label="Province"
           value={value.province}
           places={provinces.data}
+          loading={provinces.loading}
           error={provinces.error}
           waitingFor={value.region ? '' : 'a region'}
           onChange={(province) => set({ province }, ['city', 'barangay'])}
@@ -75,6 +79,7 @@ export default function PlacePicker({ value, onChange }: { value: PlaceValue; on
         label={ph ? 'City / municipality' : 'City'}
         value={value.city}
         places={cities.data}
+        loading={cities.loading}
         error={cities.error}
         waitingFor={!value.region ? 'a region' : ph && !noProvinces && !value.province ? 'a province' : ''}
         onChange={(city) => set({ city }, ['barangay'])}
@@ -84,6 +89,7 @@ export default function PlacePicker({ value, onChange }: { value: PlaceValue; on
           label="Barangay"
           value={value.barangay}
           places={barangays.data}
+          loading={barangays.loading}
           error={barangays.error}
           waitingFor={value.city ? '' : 'a city or municipality'}
           onChange={(barangay) => set({ barangay }, [])}
@@ -98,14 +104,15 @@ function PlaceInput(props: {
   label: string
   value: string
   places: Place[] | undefined
+  /** The list is still coming: the field stays disabled until it is there */
+  loading: boolean
   error: string
   waitingFor?: string
   onChange: (name: string) => void
 }) {
   const listId = useId()
   const { places, error, waitingFor } = props
-  // A list is only asked for once the level above is one of its known places
-  const loading = !waitingFor && !error && places === undefined
+  const loading = props.loading && !waitingFor
 
   return (
     <label className={ui.label}>
@@ -116,9 +123,15 @@ function PlaceInput(props: {
         onChange={(e) => props.onChange(e.target.value)}
         list={listId}
         autoComplete="off"
-        disabled={!!waitingFor && !props.value}
+        disabled={loading || (!!waitingFor && !props.value)}
+        aria-busy={loading}
         placeholder={waitingFor ? `Choose ${waitingFor} first` : loading ? 'Loading…' : places?.length ? 'Type to search' : 'Type the name'}
       />
+      {loading && props.value && (
+        <span className={cx(ui.hint, 'inline-flex items-center gap-1.5 font-normal')}>
+          <Spinner className="size-3" /> Loading the list…
+        </span>
+      )}
       <datalist id={listId}>
         {places?.map((place) => (
           <option key={place.code} value={place.name} />
