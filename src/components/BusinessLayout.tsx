@@ -3,8 +3,10 @@ import { getBusinessContext } from '../api/businesses'
 import type { BusinessContext } from '../businessContext'
 import { labelOf } from '../constants/options'
 import { useLoad } from '../hooks/useLoad'
+import NotificationBell from './NotificationBell'
 import SidebarLayout from './SidebarLayout'
 import {
+  ActivityIcon,
   CommerceIcon,
   DashboardIcon,
   InventoryIcon,
@@ -56,7 +58,10 @@ export default function BusinessLayout() {
           <Link to="/dashboard/business" className="text-[0.88rem] font-semibold text-side-text no-underline hover:text-lime">
             ← All businesses
           </Link>
-          <div className="text-[1.15rem] leading-tight font-extrabold wrap-break-word text-side-heading">{business.businessName}</div>
+          <div className="flex w-full items-start justify-between gap-2">
+            <div className="min-w-0 text-[1.15rem] leading-tight font-extrabold wrap-break-word text-side-heading">{business.businessName}</div>
+            <NotificationBell businessId={business.id} />
+          </div>
           <div className="-mt-1.5 text-[0.8rem] text-side-text">{business.businessTypes.map(labelOf).join(' · ')}</div>
           <VerifiedBadge status={business.verificationStatus} level={business.verificationLevel} />
         </div>
@@ -69,6 +74,7 @@ export default function BusinessLayout() {
         { to: `${base}/orders`, label: 'Orders', icon: <OrdersIcon /> },
         { to: `${base}/messages`, label: 'Messages', icon: <MessagesIcon /> },
         { to: `${base}/network`, label: 'Network', icon: <NetworkIcon /> },
+        { to: `${base}/activity`, label: 'Activity', icon: <ActivityIcon /> },
         { to: `${base}/commerce`, label: 'Delivery & payments', icon: <CommerceIcon /> },
         { to: `${base}/team`, label: 'Team', icon: <TeamIcon /> },
       ]}

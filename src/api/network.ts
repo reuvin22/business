@@ -2,8 +2,9 @@ import { get, post } from './client'
 import type { Conversation, Message, RelationshipView, Review } from './types'
 
 // ---- Relationships ----
-export const listRelationships = (businessId: string) =>
-  get<RelationshipView[]>(`/businesses/${businessId}/relationships`)
+/** Pass { fresh: true } to skip the browser cache (e.g. to see that the other side just accepted). */
+export const listRelationships = (businessId: string, options: { fresh?: boolean } = {}) =>
+  get<RelationshipView[]>(`/businesses/${businessId}/relationships`, options)
 export const requestRelationship = (
   businessId: string,
   body: { relatedBusinessId: string; relationshipType: string; notes: string },

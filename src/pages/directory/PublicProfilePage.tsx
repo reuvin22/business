@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getPublicProfile, listPublicProducts, listPublicReviews } from '../../api/directory'
-import { requestRelationship } from '../../api/network'
+import { endRelationship, listRelationships, requestRelationship, respondToRelationship } from '../../api/network'
+import type { RelationshipView } from '../../api/types'
 import ReviewCard from '../../components/ReviewCard'
-import { BusinessLogo, BusyButton, EmptyState, ErrorBox, Loading, Stars, Tabs, VerifiedBadge } from '../../components/ui'
+import { BusinessLogo, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, Spinner, Stars, Tabs, VerifiedBadge } from '../../components/ui'
 import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
 import { useActingBusiness } from '../../hooks/useActingBusiness'
+import { useOnActivity } from '../../hooks/useActivity'
 import { useBusy } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
@@ -79,7 +81,7 @@ export default function PublicProfilePage() {
           <Link to={`/business/${acting.id}/messages?to=${businessId}`} className={ui.btnGhost}>
             Message
           </Link>
-          <ConnectForm fromBusinessId={acting.id} toBusinessId={businessId} />
+          <Connection key={acting.id} fromBusinessId={acting.id} toBusinessId={businessId} businessName={business.businessName} />
         </div>
       ) : (
         <p className={ui.alertInfo}>
@@ -110,21 +112,127 @@ export default function PublicProfilePage() {
   )
 }
 
+type ConnectionProps = { fromBusinessId: string; toBusinessId: string; businessName: string }
+
+/** Where you stand with this business: connected (withdraw), a request waiting, or the form to connect. */
+function Connection({ fromBusinessId, toBusinessId, businessName }: ConnectionProps) {
+  // Fresh: when they accept on their side, opening this page shows it straight away
+  const relationships = useLoad(() => listRelationships(fromBusinessId, { fresh: true }), [fromBusinessId])
+  // Live: when they accept, decline, or withdraw, this changes by itself
+  useOnActivity(fromBusinessId, ['CONNECTIONS'], () => relationships.reload())
+  const [error, setError] = useState('')
+  const [busy, run] = useBusy()
+
+  if (!relationships.data) {
+    return relationships.error ? <span className="text-[0.85rem] text-danger">{relationships.error}</span> : <Spinner />
+  }
+  const open = relationships.data.filter(
+    (r) => r.otherBusinessId === toBusinessId && (r.status === 'ACTIVE' || r.status === 'PENDING'),
+  )
+  if (open.length === 0) return <ConnectForm fromBusinessId={fromBusinessId} toBusinessId={toBusinessId} onSent={relationships.reload} />
+
+  async function act(change: () => Promise<unknown>) {
+    setError('')
+    try {
+      await change()
+      await relationships.reload() // keep the button busy until the new status shows
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {open.map((r) => (
+        <ConnectionRow
+          key={r.id}
+          relationship={r}
+          businessName={businessName}
+          busy={busy}
+          onRespond={(accept) => run(() => act(() => respondToRelationship(fromBusinessId, r.id, accept)))}
+          onWithdraw={() => act(() => endRelationship(fromBusinessId, r.id))}
+        />
+      ))}
+      {error && <span className="text-[0.85rem] text-danger">{error}</span>}
+    </div>
+  )
+}
+
+function ConnectionRow({
+  relationship: r,
+  businessName,
+  busy,
+  onRespond,
+  onWithdraw,
+}: {
+  relationship: RelationshipView
+  businessName: string
+  busy: boolean
+  onRespond: (accept: boolean) => void
+  onWithdraw: () => Promise<unknown>
+}) {
+  const role = labelOf(r.theirRole).toLowerCase()
+
+  if (r.status === 'ACTIVE') {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-3 py-1.5 text-[0.9rem] font-semibold text-info">
+          <span aria-hidden="true">✓</span> You are now connected with {businessName}
+        </span>
+        <span className={ui.hint}>They are your {role}.</span>
+        <ConfirmButton label="Withdraw" confirmLabel="Withdraw connection" onConfirm={onWithdraw} />
+      </div>
+    )
+  }
+
+  if (r.direction === 'OUTGOING') {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="rounded-full bg-warn-soft px-3 py-1.5 text-[0.9rem] font-semibold text-warn">Request sent</span>
+        <span className={ui.hint}>
+          Waiting for {businessName} to accept. You asked to add them as your {role}.
+        </span>
+        <ConfirmButton label="Withdraw request" confirmLabel="Withdraw request" onConfirm={onWithdraw} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className={ui.hint}>
+        {businessName} wants to connect, as your {role}.
+      </span>
+      <BusyButton className={ui.btnPrimary} busy={busy} onClick={() => onRespond(true)}>
+        Accept
+      </BusyButton>
+      <button type="button" className={ui.btnGhost} disabled={busy} onClick={() => onRespond(false)}>
+        Decline
+      </button>
+    </div>
+  )
+}
+
 /** "Add as ... " — ask the other business to connect. */
-function ConnectForm({ fromBusinessId, toBusinessId }: { fromBusinessId: string; toBusinessId: string }) {
+function ConnectForm({
+  fromBusinessId,
+  toBusinessId,
+  onSent,
+}: {
+  fromBusinessId: string
+  toBusinessId: string
+  onSent: () => Promise<unknown>
+}) {
   const [type, setType] = useState('SUPPLIER')
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [saving, run] = useBusy()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    setMessage('')
     await run(async () => {
       try {
         await requestRelationship(fromBusinessId, { relatedBusinessId: toBusinessId, relationshipType: type, notes: '' })
-        setMessage('Request sent. They will see it on their Network page.')
+        await onSent() // shows "Request sent" with a withdraw button
       } catch (err) {
         setError((err as Error).message)
       }
@@ -146,7 +254,6 @@ function ConnectForm({ fromBusinessId, toBusinessId }: { fromBusinessId: string;
       <BusyButton type="submit" className={ui.btnGhost} busy={saving}>
         Connect
       </BusyButton>
-      {message && <span className={ui.hint}>{message}</span>}
       {error && <span className="text-[0.85rem] text-danger">{error}</span>}
     </form>
   )

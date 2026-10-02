@@ -18,6 +18,7 @@ import InventoryPage from './pages/business/InventoryPage'
 import OrdersPage from './pages/business/OrdersPage'
 import OrderDetailPage from './pages/business/OrderDetailPage'
 import MessagesPage from './pages/business/MessagesPage'
+import ActivityPage from './pages/business/ActivityPage'
 import NetworkPage from './pages/business/NetworkPage'
 import CommercePage from './pages/business/CommercePage'
 import TeamPage from './pages/business/TeamPage'
@@ -95,6 +96,7 @@ function App() {
             <Route path="orders/:orderId" element={<OrderDetailPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="network" element={<NetworkPage />} />
+            <Route path="activity" element={<ActivityPage />} />
             <Route path="commerce" element={<CommercePage />} />
             <Route path="team" element={<TeamPage />} />
           </Route>

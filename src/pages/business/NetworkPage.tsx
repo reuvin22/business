@@ -7,6 +7,7 @@ import { useBusiness } from '../../businessContext'
 import ReviewCard from '../../components/ReviewCard'
 import { Badge, BusyButton, ConfirmButton, EmptyState, ErrorBox, Loading, Modal, PageHeader, Stars, Tabs } from '../../components/ui'
 import { labelOf, RELATIONSHIP_TYPES } from '../../constants/options'
+import { useOnActivity } from '../../hooks/useActivity'
 import { useBusy, useRunning } from '../../hooks/useBusy'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
@@ -29,20 +30,36 @@ export default function NetworkPage() {
   )
 }
 
+type Filter = 'partners' | 'ended' | 'all'
+
+const FILTERS: { key: Filter; label: string; matches: (r: RelationshipView) => boolean }[] = [
+  // Connected, plus requests you sent that are waiting for an answer
+  { key: 'partners', label: 'Partners', matches: (r) => r.status === 'ACTIVE' || r.status === 'PENDING' },
+  { key: 'ended', label: 'Ended', matches: (r) => r.status === 'ENDED' || r.status === 'DECLINED' },
+  { key: 'all', label: 'All', matches: () => true },
+]
+
 function RelationshipsTab() {
   const { business, can } = useBusiness()
-  const { data: relationships, error, reload } = useLoad(() => network.listRelationships(business.id), [business.id])
+  const { data: relationships, error, reload } = useLoad(
+    () => network.listRelationships(business.id, { fresh: true }),
+    [business.id],
+  )
+  // Live: when the other business accepts, declines, or withdraws, the table changes by itself
+  useOnActivity(business.id, ['CONNECTIONS'], () => reload())
+  const [filter, setFilter] = useState<Filter>('partners')
   const [adding, setAdding] = useState(false)
   const [actionError, setActionError] = useState('')
   const [running, run] = useRunning()
   const canEdit = can('relationships.manage')
 
+  // The button keeps spinning until the table shows the change
   async function act(name: string, action: () => Promise<unknown>) {
     setActionError('')
     await run(name, async () => {
       try {
         await action()
-        reload()
+        await reload()
       } catch (err) {
         setActionError((err as Error).message)
       }
@@ -50,7 +67,9 @@ function RelationshipsTab() {
   }
 
   const incoming = relationships?.filter((r) => r.direction === 'INCOMING' && r.status === 'PENDING') ?? []
-  const others = relationships?.filter((r) => !incoming.includes(r)) ?? []
+  const listed = relationships?.filter((r) => !incoming.includes(r)) ?? []
+  const current = FILTERS.find((f) => f.key === filter)!
+  const others = listed.filter(current.matches)
 
   return (
     <>
@@ -64,9 +83,9 @@ function RelationshipsTab() {
       </div>
       {adding && (
         <RelationshipForm
-          onDone={() => {
+          onDone={async () => {
+            await reload()
             setAdding(false)
-            reload()
           }}
         />
       )}
@@ -106,10 +125,31 @@ function RelationshipsTab() {
         </section>
       )}
 
+      {relationships && listed.length > 0 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Show">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={filter === f.key}
+              className={cx(
+                'cursor-pointer rounded-full border px-3.5 py-1.5 text-[0.88rem] font-semibold',
+                filter === f.key ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-body hover:border-muted',
+              )}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label} <span className="text-muted">{listed.filter(f.matches).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!relationships ? (
         <Loading />
-      ) : others.length === 0 && incoming.length === 0 ? (
+      ) : listed.length === 0 && incoming.length === 0 ? (
         !adding && <EmptyState text="No relationships yet." />
+      ) : others.length === 0 ? (
+        listed.length > 0 && <EmptyState text={filter === 'ended' ? 'No ended relationships.' : 'No partners yet.'} />
       ) : (
         others.length > 0 && (
           <div className={ui.tableWrap}>
@@ -137,7 +177,15 @@ function RelationshipsTab() {
   )
 }
 
-function RelationshipRow({ relationship: r, canEdit, onEnd }: { relationship: RelationshipView; canEdit: boolean; onEnd: () => void }) {
+function RelationshipRow({
+  relationship: r,
+  canEdit,
+  onEnd,
+}: {
+  relationship: RelationshipView
+  canEdit: boolean
+  onEnd: () => Promise<unknown>
+}) {
   const open = r.status === 'ACTIVE' || r.status === 'PENDING'
   return (
     <tr>
@@ -162,7 +210,7 @@ function RelationshipRow({ relationship: r, canEdit, onEnd }: { relationship: Re
   )
 }
 
-function RelationshipForm({ onDone }: { onDone: () => void }) {
+function RelationshipForm({ onDone }: { onDone: () => Promise<unknown> | void }) {
   const { business } = useBusiness()
   const { data: businesses = [] } = useLoad(() => searchBusinesses({}), [])
   const [otherId, setOtherId] = useState('')
@@ -177,7 +225,7 @@ function RelationshipForm({ onDone }: { onDone: () => void }) {
     await runSave(async () => {
       try {
         await network.requestRelationship(business.id, { relatedBusinessId: otherId, relationshipType: type, notes })
-        onDone()
+        await onDone() // keeps spinning until the table shows it
       } catch (err) {
         setError((err as Error).message)
       }

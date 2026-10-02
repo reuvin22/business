@@ -519,6 +519,21 @@ export type LiveMessage = {
 
 export type ChatAccess = { uid: string; businessId: string; teamPath: string; marketPath: string }
 
+export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS'
+
+/** Something that happened to a business: in its history, and live as a notification. */
+export type Activity = {
+  id: string
+  category: ActivityCategory
+  action: string // e.g. "product.created", "connection.accepted", "message.received"
+  title: string
+  detail: string
+  link: string // relative to the business, e.g. "/products/abc"
+  actorUid: string // "" when another business did it
+  actorName: string
+  createdAt: number
+}
+
 // ---- Directory -------------------------------------------------------------------------
 
 export type PublicContact = Pick<

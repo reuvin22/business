@@ -6,6 +6,7 @@ import * as network from '../../api/network'
 import type { ChatAccess, ChatMessage, LiveMessage } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { BusyButton, EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { useRealtimeMessages, useRealtimeValue } from '../../hooks/useRealtime'
 import { formatDateTime, initials } from '../../utils/format'
@@ -36,6 +37,8 @@ export default function MessagesPage() {
   const access = useLoad(() => chat.getChatAccess(business.id), [business.id])
   const conversations = useLoad(() => network.listConversations(business.id), [business.id])
   useRefreshTimer(conversations.reload)
+  // A new message from another business: its conversation moves up with an unread dot right away
+  useOnActivity(business.id, ['MESSAGES'], () => conversations.reload())
 
   // ?c=team | market | <conversationId>; ?to=<businessId> opens (or starts) the chat with that business
   const toBusinessId = params.get('to')
