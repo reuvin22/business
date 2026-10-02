@@ -43,7 +43,7 @@ export default function OrderDetailPage() {
           <>
             <Badge value={order.orderStatus} />
             <Badge value={order.paymentStatus} />
-            <Link to={`/business/${business.id}/messages?to=${other.id}&order=${order.id}`} className={ui.btnGhost}>
+            <Link to={`/business/${business.id}/messages?to=${other.id}`} className={ui.btnGhost}>
               Message {other.role.toLowerCase()}
             </Link>
           </>

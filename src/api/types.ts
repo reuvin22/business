@@ -503,7 +503,8 @@ export type Message = Saved & {
 export type OrderCard = {
   orderId: string
   orderNumber: string
-  items: { productName: string; variantName: string; quantity: number; unit: string }[]
+  /** unitPrice and subtotal: missing on cards sent before prices were included */
+  items: { productName: string; variantName: string; quantity: number; unit: string; unitPrice?: number | null; subtotal?: number | null }[]
   total: number
   currency: string
   status: string
