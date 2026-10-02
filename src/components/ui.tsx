@@ -232,6 +232,38 @@ export function ConfirmButton({
 }
 
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
+  // Grouped tabs: the categories first, then the tabs of the chosen category
+  const groups = [...new Set(tabs.map((tab) => tab.group).filter((group): group is string => !!group))]
+  if (groups.length > 1) {
+    const activeGroup = tabs.find((tab) => tab.key === active)?.group ?? groups[0]
+    const inGroup = tabs.filter((tab) => tab.group === activeGroup)
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Categories">
+          {groups.map((group) => (
+            <button
+              key={group}
+              type="button"
+              role="tab"
+              aria-selected={group === activeGroup}
+              onClick={() => group !== activeGroup && onChange(tabs.find((tab) => tab.group === group)!.key)}
+              className={cx(
+                'cursor-pointer rounded-full border px-4 py-1.5 text-[0.88rem] font-semibold',
+                group === activeGroup ? 'border-accent bg-accent text-white' : 'border-line bg-surface text-body hover:border-muted hover:text-heading',
+              )}
+            >
+              {group}
+            </button>
+          ))}
+        </div>
+        {inGroup.length > 1 && <TabBar tabs={inGroup} active={active} onChange={onChange} />}
+      </div>
+    )
+  }
+  return <TabBar tabs={tabs} active={active} onChange={onChange} />
+}
+
+function TabBar({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
   return (
     // The bottom line is a shadow inside the bar (not a border the tabs overlap), so nothing sticks out
     // and no scrollbar appears; on narrow screens the tabs still swipe sideways, without a visible scrollbar

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { listActivity } from '../../api/activity'
 import type { ActivityCategory } from '../../api/types'
 import { useBusiness } from '../../businessContext'
+import DateRangePicker from '../../components/DateRangePicker'
 import { EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
@@ -50,14 +51,19 @@ export default function ActivityPage() {
             ))}
           </select>
         </label>
-        <label className={ui.label}>
-          From
-          <input className={ui.inputAuto} type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label className={ui.label}>
-          To
-          <input className={ui.inputAuto} type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
-        </label>
+        <div className={ui.label}>
+          Dates
+          <DateRangePicker
+            label="Dates"
+            value={{ from, to }}
+            max={new Date().toLocaleDateString('en-CA')}
+            allowAll
+            onChange={(range) => {
+              setFrom(range.from)
+              setTo(range.to)
+            }}
+          />
+        </div>
         {filtered && (
           <button
             type="button"

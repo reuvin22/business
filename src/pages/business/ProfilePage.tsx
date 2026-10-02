@@ -21,16 +21,17 @@ import LocationsTab from './profile/LocationsTab'
 import VerificationTab from './profile/VerificationTab'
 import { ui } from '../../styles'
 
+// By category: what buyers see about you, how they pay, and what proves you are legitimate
 const TABS = [
-  { key: 'identity', label: 'Business info' },
-  { key: 'legal', label: 'Legal & tax' },
-  { key: 'contacts', label: 'Contacts' },
-  { key: 'locations', label: 'Locations & hours' },
-  { key: 'payments', label: 'Payment methods' },
-  { key: 'online', label: 'Online presence' },
-  { key: 'certifications', label: 'Certifications' },
-  { key: 'documents', label: 'Documents' },
-  { key: 'verification', label: 'Verification' },
+  { key: 'identity', label: 'Business info', group: 'Profile' },
+  { key: 'contacts', label: 'Contacts', group: 'Profile' },
+  { key: 'locations', label: 'Locations & hours', group: 'Profile' },
+  { key: 'online', label: 'Online presence', group: 'Profile' },
+  { key: 'payments', label: 'Payment methods', group: 'Payments' },
+  { key: 'legal', label: 'Legal & tax', group: 'Trust & compliance' },
+  { key: 'certifications', label: 'Certifications', group: 'Trust & compliance' },
+  { key: 'documents', label: 'Documents', group: 'Trust & compliance' },
+  { key: 'verification', label: 'Verification', group: 'Trust & compliance' },
 ]
 
 export default function ProfilePage() {

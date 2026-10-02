@@ -67,16 +67,16 @@ export default function BusinessLayout() {
         </div>
       }
       items={[
-        { to: base, label: 'Dashboard', icon: <DashboardIcon />, end: true },
-        { to: `${base}/profile`, label: 'Profile', icon: <ProfileIcon /> },
-        { to: `${base}/products`, label: 'Products', icon: <ProductsIcon /> },
-        { to: `${base}/inventory`, label: 'Inventory', icon: <InventoryIcon /> },
-        { to: `${base}/orders`, label: 'Orders', icon: <OrdersIcon /> },
-        { to: `${base}/messages`, label: 'Messages', icon: <MessagesIcon /> },
-        { to: `${base}/network`, label: 'Network', icon: <NetworkIcon /> },
-        { to: `${base}/activity`, label: 'Activity', icon: <ActivityIcon /> },
-        { to: `${base}/commerce`, label: 'Delivery & payments', icon: <CommerceIcon /> },
-        { to: `${base}/team`, label: 'Team', icon: <TeamIcon /> },
+        { to: base, label: 'Dashboard', icon: <DashboardIcon />, end: true, group: 'Overview' },
+        { to: `${base}/activity`, label: 'Activity', icon: <ActivityIcon />, group: 'Overview' },
+        { to: `${base}/products`, label: 'Products', icon: <ProductsIcon />, group: 'Selling' },
+        { to: `${base}/inventory`, label: 'Inventory', icon: <InventoryIcon />, group: 'Selling' },
+        { to: `${base}/orders`, label: 'Orders', icon: <OrdersIcon />, group: 'Selling' },
+        { to: `${base}/messages`, label: 'Messages', icon: <MessagesIcon />, group: 'Connect' },
+        { to: `${base}/network`, label: 'Network', icon: <NetworkIcon />, group: 'Connect' },
+        { to: `${base}/profile`, label: 'Profile', icon: <ProfileIcon />, group: 'Business' },
+        { to: `${base}/commerce`, label: 'Delivery & payments', icon: <CommerceIcon />, group: 'Business' },
+        { to: `${base}/team`, label: 'Team', icon: <TeamIcon />, group: 'Business' },
       ]}
     >
       <Outlet context={context} />

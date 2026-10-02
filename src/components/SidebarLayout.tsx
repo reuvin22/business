@@ -1,12 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { cx } from '../styles'
 import { useAuth } from '../useAuth'
 import { LogoutIcon, MenuIcon } from './icons'
+import ThemeSwitch from './ThemeSwitch'
 
-export type NavItem = { to: string; label: string; icon: ReactNode; end?: boolean }
+/** group: links with a group are listed under that heading (e.g. Selling, Business) */
+export type NavItem = { to: string; label: string; icon: ReactNode; end?: boolean; group?: string }
 
 type Props = {
   title: string
@@ -56,22 +58,27 @@ export default function SidebarLayout({ title, header, items, children }: Props)
           </div>
         )}
 
-        <nav className="flex flex-col gap-1">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={close}
-              className={({ isActive }) => cx(navItemClass, isActive && 'bg-side-active font-semibold text-lime hover:text-lime')}
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
+        <nav className="flex flex-col gap-1 overflow-y-auto">
+          {items.map((item, i) => (
+            <Fragment key={item.to}>
+              {item.group && item.group !== items[i - 1]?.group && (
+                <span className="mt-3 px-3.5 pb-0.5 text-[0.7rem] font-bold tracking-wider text-side-text/70 uppercase first:mt-0">{item.group}</span>
+              )}
+              <NavLink
+                to={item.to}
+                end={item.end}
+                onClick={close}
+                className={({ isActive }) => cx(navItemClass, isActive && 'bg-side-active font-semibold text-lime hover:text-lime')}
+              >
+                {item.icon}
+                {item.label}
+              </NavLink>
+            </Fragment>
           ))}
         </nav>
 
         <div className="mt-auto flex flex-col gap-3.5">
+          <ThemeSwitch showLabels />
           <button type="button" className={cx(navItemClass, 'hover:text-white')} onClick={handleLogout}>
             <LogoutIcon />
             Log out

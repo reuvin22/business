@@ -43,32 +43,37 @@
   --color-grid: #ededea;
 }
 
-/* Dark mode: the same tokens with dark values (follows the device setting) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-page: #141413;
-    --color-surface: #1e1e1d;
-    --color-body: #b9b9b2;
-    --color-heading: #f3f3ef;
-    --color-muted: #85857f;
-    --color-line: #2e2e2c;
-    --color-chip: #2a2a28;
-    --color-accent: #5fb597;
-    --color-danger: #f08a84;
-    --color-danger-soft: #3a1614;
-    --color-info: #6fcfa6;
-    --color-info-soft: #13291f;
-    --color-warn: #f2b54a;
-    --color-warn-soft: #33260f;
-    --color-side: #1a1a19;
-    --color-side-hover: #262625;
-    --color-side-active: #2c2c2a;
-    --color-up: #4fc596;
-    --color-down: #f0766f;
-    --color-bar: #3f8b73;
-    --color-bar-stripe: #5ea58e;
-    --color-chart-line: #b598d4;
-    --color-track: #262625;
-    --color-grid: #2a2a28;
-  }
+/* Light or dark controls (date pickers, scrollbars) follow the theme too */
+:root {
+  color-scheme: light;
+}
+
+/* Night mode: the same tokens with dark values. data-theme is set by index.html and src/utils/theme.ts:
+   the person's choice (Light / Night), or the device's setting (Auto). */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-page: #141413;
+  --color-surface: #1e1e1d;
+  --color-body: #b9b9b2;
+  --color-heading: #f3f3ef;
+  --color-muted: #85857f;
+  --color-line: #2e2e2c;
+  --color-chip: #2a2a28;
+  --color-accent: #5fb597;
+  --color-danger: #f08a84;
+  --color-danger-soft: #3a1614;
+  --color-info: #6fcfa6;
+  --color-info-soft: #13291f;
+  --color-warn: #f2b54a;
+  --color-warn-soft: #33260f;
+  --color-side: #1a1a19;
+  --color-side-hover: #262625;
+  --color-side-active: #2c2c2a;
+  --color-up: #4fc596;
+  --color-down: #f0766f;
+  --color-bar: #3f8b73;
+  --color-bar-stripe: #5ea58e;
+  --color-chart-line: #b598d4;
+  --color-track: #262625;
+  --color-grid: #2a2a28;
 }

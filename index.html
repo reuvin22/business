@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="scheme-light-dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -9,6 +9,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SIRIS — Supplier Inventory &amp; Retail Integration System" />
     <title>SIRIS · Supplier Inventory &amp; Retail Integration System</title>
+    <!-- Night mode: apply the saved choice (or the device's) before the page draws, so it never flashes -->
+    <script>
+      try {
+        var saved = localStorage.getItem('theme')
+      } catch (e) {}
+      var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    </script>
   </head>
   <body class="min-h-screen bg-page font-sans text-[15px]/normal text-body antialiased">
     <div id="root"></div>

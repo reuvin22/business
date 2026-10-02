@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 
-export type Tab = { key: string; label: string }
+/** group: tabs with a group are shown by category (a row of categories, then that category's tabs). */
+export type Tab = { key: string; label: string; group?: string }
 
 /** The selected tab is kept in the URL (?tab=...), so links and the back button work. */
 export function useTab(tabs: Tab[]) {
