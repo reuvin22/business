@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { listOrders } from '../../api/orders'
 import { useBusiness } from '../../businessContext'
 import { Badge, EmptyState, ErrorBox, Loading, PageHeader, Tabs } from '../../components/ui'
+import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDateTime, formatMoney } from '../../utils/format'
@@ -16,7 +17,10 @@ export default function OrdersPage() {
   const { business } = useBusiness()
   const [tab, setTab] = useTab(TABS)
   const side = tab as 'selling' | 'buying'
-  const { data: orders, loading, error } = useLoad(() => listOrders(business.id, side), [business.id, side])
+  const { data: orders, loading, error, reload } = useLoad(() => listOrders(business.id, side), [business.id, side])
+  // Live: a new order, or the other business accepting or declining one, shows up by itself
+  useOnActivity(business.id, ['ORDERS'], () => reload())
+  const navigate = useNavigate()
 
   return (
     <div className={ui.page}>
@@ -58,9 +62,13 @@ export default function OrdersPage() {
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id}>
+                <tr
+                  key={order.id}
+                  className="cursor-pointer hover:bg-page"
+                  onClick={() => navigate(`/business/${business.id}/orders/${order.id}`)}
+                >
                   <td className={cx(ui.td, ui.strong)}>
-                    <Link to={`/business/${business.id}/orders/${order.id}`} className={ui.rowLink}>
+                    <Link to={`/business/${business.id}/orders/${order.id}`} className={ui.rowLink} onClick={(e) => e.stopPropagation()}>
                       {order.orderNumber}
                     </Link>
                   </td>

@@ -8,6 +8,7 @@ import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsVi
 import { Badge, BusyButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { labelOf, PAYMENT_STATUSES, RATING_DIMENSIONS } from '../../constants/options'
 import { useBusy } from '../../hooks/useBusy'
+import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { formatDateTime, formatMoney } from '../../utils/format'
 import { cx, ui } from '../../styles'
@@ -16,6 +17,8 @@ export default function OrderDetailPage() {
   const { business } = useBusiness()
   const { orderId = '' } = useParams()
   const { data: order, error, reload } = useLoad(() => ordersApi.getOrder(business.id, orderId), [business.id, orderId])
+  // Live: when the other business accepts, declines, ships... this order, it changes on the screen
+  useOnActivity(business.id, ['ORDERS'], (activity) => activity.link === `/orders/${orderId}` && reload())
 
   const backLink = (
     <Link to={`/business/${business.id}/orders`} className={ui.backLink}>
@@ -40,7 +43,7 @@ export default function OrderDetailPage() {
           <>
             <Badge value={order.orderStatus} />
             <Badge value={order.paymentStatus} />
-            <Link to={`/business/${business.id}/messages?to=${other.id}`} className={ui.btnGhost}>
+            <Link to={`/business/${business.id}/messages?to=${other.id}&order=${order.id}`} className={ui.btnGhost}>
               Message {other.role.toLowerCase()}
             </Link>
           </>

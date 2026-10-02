@@ -3,9 +3,10 @@ import type { Order, OrderIn, OrderView, Quote, Ratings, Review } from './types'
 
 const orders = (businessId: string) => `/businesses/${businessId}/orders`
 
+// Always fresh: the other business may have just accepted, declined, or shipped it
 export const listOrders = (businessId: string, side?: 'buying' | 'selling') =>
-  get<Order[]>(`${orders(businessId)}${query({ side })}`)
-export const getOrder = (businessId: string, orderId: string) => get<OrderView>(`${orders(businessId)}/${orderId}`)
+  get<Order[]>(`${orders(businessId)}${query({ side })}`, { fresh: true })
+export const getOrder = (businessId: string, orderId: string) => get<OrderView>(`${orders(businessId)}/${orderId}`, { fresh: true })
 
 /** Prices an order without placing it. */
 export const quoteOrder = (buyerBusinessId: string, body: OrderIn) => post<Quote>(`${orders(buyerBusinessId)}/quote`, body)

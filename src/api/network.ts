@@ -18,14 +18,15 @@ export const endRelationship = (businessId: string, relationshipId: string) =>
 // Messages are checked every few seconds, so they always skip the browser cache
 export const listConversations = (businessId: string) =>
   get<Conversation[]>(`/businesses/${businessId}/conversations`, { fresh: true })
-export const startConversation = (businessId: string, body: { participantBusinessId: string; message: string }) =>
+export const startConversation = (businessId: string, body: { participantBusinessId: string; message: string; orderId?: string | null }) =>
   post<Conversation>(`/businesses/${businessId}/conversations`, body)
 export const openConversation = (businessId: string, conversationId: string) =>
   get<{ conversation: Conversation; messages: Message[] }>(`/businesses/${businessId}/conversations/${conversationId}`, {
     fresh: true,
   })
-export const sendMessage = (businessId: string, conversationId: string, message: string) =>
-  post<Message>(`/businesses/${businessId}/conversations/${conversationId}/messages`, { message, attachments: [] })
+/** orderId: an order between the two businesses, sent along as a card */
+export const sendMessage = (businessId: string, conversationId: string, message: string, orderId?: string | null) =>
+  post<Message>(`/businesses/${businessId}/conversations/${conversationId}/messages`, { message, attachments: [], orderId: orderId ?? null })
 
 // ---- Reviews about this business ----
 export const listMyReviews = (businessId: string) => get<Review[]>(`/businesses/${businessId}/reviews`)

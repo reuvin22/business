@@ -494,7 +494,19 @@ export type Message = Saved & {
   senderBusinessId: string
   message: string
   attachments: string[]
+  /** The order the message is about, as a small card */
+  order?: OrderCard | null
   readAt: number | null
+}
+
+/** An order as a card in a message (copied when the message was sent). */
+export type OrderCard = {
+  orderId: string
+  orderNumber: string
+  items: { productName: string; variantName: string; quantity: number; unit: string }[]
+  total: number
+  currency: string
+  status: string
 }
 
 /** A message in the team or market channel (from the Realtime Database). */
@@ -516,6 +528,7 @@ export type LiveMessage = {
   senderName: string
   senderBusinessId: string
   message: string
+  order?: OrderCard
   createdAt: number
 }
 

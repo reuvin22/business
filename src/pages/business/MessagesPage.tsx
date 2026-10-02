@@ -3,13 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom'
 import * as chat from '../../api/chat'
 import { getPublicProfile } from '../../api/directory'
 import * as network from '../../api/network'
-import type { ChatAccess, ChatMessage, LiveMessage } from '../../api/types'
+import { getOrder } from '../../api/orders'
+import type { ChatAccess, ChatMessage, LiveMessage, OrderCard } from '../../api/types'
 import { useBusiness } from '../../businessContext'
-import { BusyButton, EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import { Badge, BusyButton, EmptyState, ErrorBox, Loading, PageHeader } from '../../components/ui'
 import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { useRealtimeMessages, useRealtimeValue } from '../../hooks/useRealtime'
-import { formatDateTime, initials } from '../../utils/format'
+import { formatDateTime, formatMoney, initials } from '../../utils/format'
 import { cx, ui } from '../../styles'
 
 // The conversation list (who wrote last, unread dots) is checked this often. The messages
@@ -45,6 +46,14 @@ export default function MessagesPage() {
   const existing = conversations.data?.find((c) => c.otherBusinessId === toBusinessId)
   const selected = params.get('c') ?? existing?.id ?? (toBusinessId ? null : 'team')
   const select = (id: string) => setParams({ c: id })
+  // ?order=<orderId>: from an order's "Message ..." button; sent as a card with the next message
+  const attachOrderId = params.get('order')
+  const dropAttachment = () =>
+    setParams((p) => {
+      const next = new URLSearchParams(p)
+      next.delete('order')
+      return next
+    })
 
   return (
     <div className={ui.page}>
@@ -83,10 +92,18 @@ export default function MessagesPage() {
           ) : selected === 'team' || selected === 'market' ? (
             <ChannelView key={selected} channel={selected} access={access.data} canPost={selected === 'team' || can('messages.send')} />
           ) : selected ? (
-            <Thread key={selected} conversationId={selected} onChange={conversations.reload} canSend={can('messages.send')} />
+            <Thread
+              key={selected}
+              conversationId={selected}
+              onChange={conversations.reload}
+              canSend={can('messages.send')}
+              attachOrderId={attachOrderId}
+              onAttachmentDone={dropAttachment}
+            />
           ) : toBusinessId ? (
             <NewConversation
               toBusinessId={toBusinessId}
+              attachOrderId={attachOrderId}
               canSend={can('messages.send')}
               onStarted={(id) => {
                 conversations.reload()
@@ -217,7 +234,19 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
 
 // ---- Direct messages with another business ----------------------------------------------------
 
-function Thread({ conversationId, onChange, canSend }: { conversationId: string; onChange: () => void; canSend: boolean }) {
+function Thread({
+  conversationId,
+  onChange,
+  canSend,
+  attachOrderId,
+  onAttachmentDone,
+}: {
+  conversationId: string
+  onChange: () => void
+  canSend: boolean
+  attachOrderId: string | null
+  onAttachmentDone: () => void
+}) {
   const { business } = useBusiness()
   // Opening it through the API sets the chat up for live reading and marks it as read
   const opened = useLoad(() => network.openConversation(business.id, conversationId), [business.id, conversationId])
@@ -257,6 +286,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
               key={m.id}
               mine={mine}
               text={m.message}
+              order={m.order ?? undefined}
               footer={
                 <>
                   {m.senderName} · {formatDateTime(m.createdAt)}
@@ -269,8 +299,11 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
       </MessageList>
       {canSend ? (
         <Composer
-          onSend={async (text) => {
-            await network.sendMessage(business.id, conversationId, text)
+          attachOrderId={attachOrderId}
+          onRemoveAttachment={onAttachmentDone}
+          onSend={async (text, orderId) => {
+            await network.sendMessage(business.id, conversationId, text, orderId)
+            if (orderId) onAttachmentDone()
             onChange()
           }}
         />
@@ -281,7 +314,17 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
   )
 }
 
-function NewConversation({ toBusinessId, canSend, onStarted }: { toBusinessId: string; canSend: boolean; onStarted: (id: string) => void }) {
+function NewConversation({
+  toBusinessId,
+  attachOrderId,
+  canSend,
+  onStarted,
+}: {
+  toBusinessId: string
+  attachOrderId: string | null
+  canSend: boolean
+  onStarted: (id: string) => void
+}) {
   const { business } = useBusiness()
   const { data: profile, error } = useLoad(() => getPublicProfile(toBusinessId), [toBusinessId])
 
@@ -296,8 +339,13 @@ function NewConversation({ toBusinessId, canSend, onStarted }: { toBusinessId: s
       </div>
       {canSend && (
         <Composer
-          onSend={async (text) => {
-            const conversation = await network.startConversation(business.id, { participantBusinessId: toBusinessId, message: text })
+          attachOrderId={attachOrderId}
+          onSend={async (text, orderId) => {
+            const conversation = await network.startConversation(business.id, {
+              participantBusinessId: toBusinessId,
+              message: text,
+              orderId,
+            })
             onStarted(conversation.id)
           }}
         />
@@ -323,24 +371,40 @@ function MessageList({ count, loading, empty, children }: { count: number | unde
   )
 }
 
-function Bubble({ mine, text, footer }: { mine: boolean; text: string; footer: ReactNode }) {
+function Bubble({ mine, text, footer, order }: { mine: boolean; text: string; footer: ReactNode; order?: OrderCard }) {
   return (
     <div
       className={cx(
-        'max-w-[70%] px-3.5 py-2.5',
+        'flex max-w-[70%] flex-col gap-2 px-3.5 py-2.5 max-sm:max-w-[88%]',
         mine ? 'self-end rounded-[12px_12px_4px_12px] bg-info-soft' : 'self-start rounded-[12px_12px_12px_4px] bg-chip',
       )}
     >
+      {order && <OrderCardView card={order} />}
       <p className="whitespace-pre-line text-heading">{text}</p>
       <span className="mt-1 block text-[0.72rem] text-muted">{footer}</span>
     </div>
   )
 }
 
-function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (text: string) => Promise<void>; placeholder?: string }) {
-  const [text, setText] = useState('')
+function Composer({
+  onSend,
+  placeholder = 'Write a message…',
+  attachOrderId = null,
+  onRemoveAttachment,
+}: {
+  onSend: (text: string, orderId: string | null) => Promise<void>
+  placeholder?: string
+  /** An order to send along as a card (until it is sent or removed) */
+  attachOrderId?: string | null
+  onRemoveAttachment?: () => void
+}) {
+  const { business } = useBusiness()
+  const [text, setText] = useState(() => (attachOrderId ? 'About this order: ' : ''))
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  const [removed, setRemoved] = useState(false)
+  const orderId = attachOrderId && !removed ? attachOrderId : null
+  const attached = useLoad(() => (orderId ? getOrder(business.id, orderId) : Promise.resolve(null)), [business.id, orderId])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -348,8 +412,9 @@ function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (tex
     setError('')
     setSending(true)
     try {
-      await onSend(text.trim())
+      await onSend(text.trim(), orderId)
       setText('')
+      setRemoved(true) // the card went with this message
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -359,6 +424,29 @@ function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (tex
 
   return (
     <form className="flex flex-col gap-2 border-t border-line px-3.5 py-3" onSubmit={handleSubmit}>
+      {orderId && (
+        <div className="flex items-start gap-2">
+          <div className="max-w-sm flex-1">
+            {attached.data ? (
+              <OrderCardView card={orderCardOf(attached.data)} />
+            ) : (
+              <p className={cx(ui.hint, 'm-0')}>{attached.error || 'Attaching the order…'}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            className="grid size-7 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-chip hover:text-heading"
+            onClick={() => {
+              setRemoved(true)
+              onRemoveAttachment?.()
+            }}
+            aria-label="Do not send the order"
+            title="Do not send the order"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <ErrorBox message={error} />
       <div className="flex items-end gap-2.5">
         <textarea
@@ -382,3 +470,60 @@ function Composer({ onSend, placeholder = 'Write a message…' }: { onSend: (tex
     </form>
   )
 }
+
+/** The order card from a full order (what the server will copy into the message). */
+function orderCardOf(order: {
+  id: string
+  orderNumber: string
+  items: { productName: string; variantName: string; quantity: number; unit: string }[]
+  total: number
+  currency: string
+  orderStatus: string
+}): OrderCard {
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    items: order.items.map(({ productName, variantName, quantity, unit }) => ({ productName, variantName, quantity, unit })),
+    total: order.total,
+    currency: order.currency,
+    status: order.orderStatus,
+  }
+}
+
+/** A small card of an order inside a message: its number, what was ordered, and the total. Opens the order. */
+function OrderCardView({ card }: { card: OrderCard }) {
+  const { business } = useBusiness()
+  const shown = card.items.slice(0, 4)
+  return (
+    <Link
+      to={`/business/${business.id}/orders/${card.orderId}`}
+      className="block rounded-lg border border-line bg-surface px-3 py-2.5 text-body no-underline transition-colors hover:border-accent"
+    >
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[0.75rem] font-bold tracking-wider text-muted uppercase">Order</span>
+        <Badge value={card.status} />
+      </span>
+      <strong className="block text-heading">{card.orderNumber}</strong>
+      <ul className="m-0 mt-1 flex list-none flex-col gap-0.5 p-0 text-[0.85rem]">
+        {shown.map((item, i) => (
+          <li key={i} className="flex justify-between gap-3">
+            <span className="truncate">
+              {item.productName}
+              {item.variantName && ` (${item.variantName})`}
+            </span>
+            <span className="shrink-0 font-semibold text-heading tabular-nums">
+              × {item.quantity}
+              {item.unit && ` ${item.unit}`}
+            </span>
+          </li>
+        ))}
+        {card.items.length > shown.length && <li className="text-muted">+ {card.items.length - shown.length} more</li>}
+      </ul>
+      <span className="mt-1.5 flex justify-between border-t border-line pt-1.5 text-[0.85rem]">
+        <span>Total</span>
+        <strong className="text-heading tabular-nums">{formatMoney(card.total, card.currency)}</strong>
+      </span>
+    </Link>
+  )
+}
+
