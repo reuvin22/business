@@ -222,143 +222,147 @@ function CustomTemplateForm({
 
   return (
     <Modal title="Customize your own" onClose={saving ? () => {} : onClose} size="lg" closeOnBackdrop={false}>
-      <form className={ui.modalForm} onSubmit={handleSubmit}>
-        <div>
+      <form className="@container flex max-h-[calc(100dvh-2rem)] flex-col sm:max-h-[calc(100dvh-4rem)]" onSubmit={handleSubmit}>
+        <header className="border-b border-line px-6 py-4 max-sm:px-4">
           <h2 className={ui.h2}>Customize your own</h2>
           <p className={ui.hint}>Switch each feature on or off. Your products, prices, and stock stay the same; only the till changes.</p>
+        </header>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 max-sm:px-4">
+          <FormSection title="Template">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 @lg:grid-cols-2">
+              <label className={ui.label}>
+                Name
+                <input className={ui.input} value={form.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Milk tea shop" />
+              </label>
+              <label className={ui.label}>
+                Start from
+                <select
+                  className={ui.input}
+                  value=""
+                  onChange={(e) => {
+                    const preset = BUILT_IN.find((t) => t.value === e.target.value)
+                    if (preset) set(preset.switches)
+                  }}
+                >
+                  <option value="">Copy the switches of…</option>
+                  {BUILT_IN.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="How products look">
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2" role="radiogroup" aria-label="Layout">
+                <OptionCard
+                  type="radio"
+                  label="Tiles"
+                  hint="Big buttons, good for touch screens."
+                  checked={!isList}
+                  onChange={() => set({ layout: 'tiles' })}
+                />
+                <OptionCard
+                  type="radio"
+                  label="List"
+                  hint="Compact rows, good for many products and scanning."
+                  checked={isList}
+                  onChange={() => set({ layout: 'list' })}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
+                <OptionCard
+                  label="Product photos"
+                  hint={isList ? 'Not used in the list layout.' : 'Otherwise big names, like a menu board.'}
+                  checked={form.photos && !isList}
+                  disabled={isList}
+                  onChange={(photos) => set({ photos })}
+                />
+                <OptionCard
+                  label="Category tabs"
+                  hint="A tab per product category, like a menu."
+                  checked={form.categoryTabs}
+                  onChange={(categoryTabs) => set({ categoryTabs })}
+                />
+                <OptionCard
+                  label="Size / variant buttons"
+                  hint={isList ? 'Not used in the list layout.' : 'One card per product, a button per size (Small, Medium, Large).'}
+                  checked={form.variantButtons && !isList}
+                  disabled={isList}
+                  onChange={(variantButtons) => set({ variantButtons })}
+                />
+                <OptionCard
+                  label="Stock only when it runs low"
+                  hint="Otherwise every product shows how many are left."
+                  checked={form.stock === 'low'}
+                  onChange={(low) => set({ stock: low ? 'low' : 'always' })}
+                />
+                <OptionCard
+                  label="Ready for the next scan"
+                  hint="After a tap or scan, the search box is ready for the next barcode."
+                  checked={form.scanFirst}
+                  onChange={(scanFirst) => set({ scanFirst })}
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection title="What the seller asks" hint="How the order is served. Leave all off for a normal shop.">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Order types">
+                {ORDER_TYPES.map((type) => {
+                  const on = form.orderTypes.includes(type.value)
+                  return (
+                    <button
+                      key={type.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleOrderType(type.value)}
+                      className={cx(
+                        'cursor-pointer rounded-full border px-4 py-2 text-[0.9rem] font-semibold',
+                        on ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-heading hover:border-muted',
+                      )}
+                    >
+                      {on ? '✓ ' : '+ '}
+                      {type.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
+                <OptionCard
+                  label="Table number"
+                  hint={dineIn ? 'Needed for dine-in orders, printed on the receipt.' : 'Turn on Dine-in to use it.'}
+                  checked={dineIn && form.tableNumber}
+                  disabled={!dineIn}
+                  onChange={(tableNumber) => set({ tableNumber })}
+                />
+                <OptionCard
+                  label="Customer's name"
+                  hint="To call them when the order is ready, printed on the receipt."
+                  checked={form.customerName}
+                  onChange={(customerName) => set({ customerName })}
+                />
+              </div>
+            </div>
+          </FormSection>
         </div>
 
-        <FormSection title="Template">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 @lg:grid-cols-2">
-            <label className={ui.label}>
-              Name
-              <input className={ui.input} value={form.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Milk tea shop" />
-            </label>
-            <label className={ui.label}>
-              Start from
-              <select
-                className={ui.input}
-                value=""
-                onChange={(e) => {
-                  const preset = BUILT_IN.find((t) => t.value === e.target.value)
-                  if (preset) set(preset.switches)
-                }}
-              >
-                <option value="">Copy the switches of…</option>
-                {BUILT_IN.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <footer className="flex flex-col gap-2.5 rounded-b-xl border-t border-line bg-surface px-6 py-3.5 max-sm:px-4">
+          <ErrorBox message={error} />
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <button type="button" className={ui.btnGhost} onClick={onClose} disabled={saving}>
+              Cancel
+            </button>
+            <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
+              Use this template
+            </BusyButton>
           </div>
-        </FormSection>
-
-        <FormSection title="How products look">
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2" role="radiogroup" aria-label="Layout">
-              <OptionCard
-                type="radio"
-                label="Tiles"
-                hint="Big buttons, good for touch screens."
-                checked={!isList}
-                onChange={() => set({ layout: 'tiles' })}
-              />
-              <OptionCard
-                type="radio"
-                label="List"
-                hint="Compact rows, good for many products and scanning."
-                checked={isList}
-                onChange={() => set({ layout: 'list' })}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
-              <OptionCard
-                label="Product photos"
-                hint={isList ? 'Not used in the list layout.' : 'Otherwise big names, like a menu board.'}
-                checked={form.photos && !isList}
-                disabled={isList}
-                onChange={(photos) => set({ photos })}
-              />
-              <OptionCard
-                label="Category tabs"
-                hint="A tab per product category, like a menu."
-                checked={form.categoryTabs}
-                onChange={(categoryTabs) => set({ categoryTabs })}
-              />
-              <OptionCard
-                label="Size / variant buttons"
-                hint={isList ? 'Not used in the list layout.' : 'One card per product, a button per size (Small, Medium, Large).'}
-                checked={form.variantButtons && !isList}
-                disabled={isList}
-                onChange={(variantButtons) => set({ variantButtons })}
-              />
-              <OptionCard
-                label="Stock only when it runs low"
-                hint="Otherwise every product shows how many are left."
-                checked={form.stock === 'low'}
-                onChange={(low) => set({ stock: low ? 'low' : 'always' })}
-              />
-              <OptionCard
-                label="Ready for the next scan"
-                hint="After a tap or scan, the search box is ready for the next barcode."
-                checked={form.scanFirst}
-                onChange={(scanFirst) => set({ scanFirst })}
-              />
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection title="What the seller asks" hint="How the order is served. Leave all off for a normal shop.">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Order types">
-              {ORDER_TYPES.map((type) => {
-                const on = form.orderTypes.includes(type.value)
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleOrderType(type.value)}
-                    className={cx(
-                      'cursor-pointer rounded-full border px-4 py-2 text-[0.9rem] font-semibold',
-                      on ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-heading hover:border-muted',
-                    )}
-                  >
-                    {on ? '✓ ' : '+ '}
-                    {type.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
-              <OptionCard
-                label="Table number"
-                hint={dineIn ? 'Needed for dine-in orders, printed on the receipt.' : 'Turn on Dine-in to use it.'}
-                checked={dineIn && form.tableNumber}
-                disabled={!dineIn}
-                onChange={(tableNumber) => set({ tableNumber })}
-              />
-              <OptionCard
-                label="Customer's name"
-                hint="To call them when the order is ready, printed on the receipt."
-                checked={form.customerName}
-                onChange={(customerName) => set({ customerName })}
-              />
-            </div>
-          </div>
-        </FormSection>
-
-        <ErrorBox message={error} />
-        <div className={ui.modalActions}>
-          <button type="button" className={ui.btnGhost} onClick={onClose} disabled={saving}>
-            Cancel
-          </button>
-          <BusyButton type="submit" className={ui.btnPrimary} busy={saving} busyLabel="Saving…">
-            Use this template
-          </BusyButton>
-        </div>
+        </footer>
       </form>
     </Modal>
   )
