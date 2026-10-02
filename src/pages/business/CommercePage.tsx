@@ -1,22 +1,21 @@
 import {
   deliveryApi,
   deliveryZonesApi,
-  paymentMethodsApi,
   paymentTermsApi,
   returnPolicyApi,
   supplierProfileApi,
 } from '../../api/resources'
-import type { DeliverySettings, DeliveryZone, PaymentMethod, PaymentTerms, ReturnPolicy, SupplierProfile } from '../../api/types'
+import type { DeliverySettings, DeliveryZone, PaymentTerms, ReturnPolicy, SupplierProfile } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import ResourceSection from '../../components/ResourceSection'
 import SettingsForm from '../../components/SettingsForm'
-import DeliveryZoneForm from './DeliveryZoneForm'
-import { Badge, PageHeader, Tabs } from '../../components/ui'
-import { labelOf } from '../../constants/options'
+import { PageHeader, Tabs } from '../../components/ui'
 import * as forms from '../../forms/definitions'
 import { useTab } from '../../hooks/useTab'
 import { formatMoney } from '../../utils/format'
 import { ui } from '../../styles'
+import DeliveryZoneForm from './DeliveryZoneForm'
+import PaymentMethodsSection from './PaymentMethodsSection'
 
 const TABS = [
   { key: 'delivery', label: 'Delivery' },
@@ -68,22 +67,7 @@ export default function CommercePage() {
 
       {tab === 'payments' && (
         <>
-          <ResourceSection<PaymentMethod>
-            title="Payment methods"
-            description="Buyers see only the types you accept. Account details are shown to a buyer after you confirm their order."
-            businessId={business.id}
-            resource={paymentMethodsApi}
-            sections={forms.paymentMethodSections}
-            newValues={forms.newPaymentMethodValues}
-            canEdit={canEditPayments}
-            addLabel="+ Add payment method"
-            columns={[
-              { label: 'Type', render: (m) => <strong>{labelOf(m.paymentType)}</strong> },
-              { label: 'Provider', render: (m) => m.provider || '—' },
-              { label: 'Account', render: (m) => [m.accountName, m.accountNumber].filter(Boolean).join(' · ') || '—' },
-              { label: 'Status', render: (m) => <Badge value={m.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
-            ]}
-          />
+          <PaymentMethodsSection />
           <SettingsForm<PaymentTerms>
             title="Payment terms"
             description="e.g. COD, 50% down payment, Net 30."

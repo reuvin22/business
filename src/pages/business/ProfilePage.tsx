@@ -16,6 +16,7 @@ import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDate } from '../../utils/format'
 import { categoryOptions } from '../../utils/options'
+import PaymentMethodsSection from './PaymentMethodsSection'
 import LocationsTab from './profile/LocationsTab'
 import VerificationTab from './profile/VerificationTab'
 import { ui } from '../../styles'
@@ -25,6 +26,7 @@ const TABS = [
   { key: 'legal', label: 'Legal & tax' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'locations', label: 'Locations & hours' },
+  { key: 'payments', label: 'Payment methods' },
   { key: 'online', label: 'Online presence' },
   { key: 'certifications', label: 'Certifications' },
   { key: 'documents', label: 'Documents' },
@@ -54,6 +56,7 @@ export default function ProfilePage() {
       )}
       {tab === 'contacts' && <ContactsTab />}
       {tab === 'locations' && <LocationsTab businessId={business.id} canEdit={canEdit} />}
+      {tab === 'payments' && <PaymentMethodsSection />}
       {tab === 'online' && (
         <ResourceSection<SocialLink>
           title="Social & online links"

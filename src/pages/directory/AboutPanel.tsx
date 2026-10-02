@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
-import type { PublicProfile } from '../../api/types'
+import type { Location, PublicProfile } from '../../api/types'
 import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
 import { Badge } from '../../components/ui'
 import { labelOf, SUPPLIER_CAPABILITIES } from '../../constants/options'
 import { formatDate, formatMoney } from '../../utils/format'
-import { hoursSummary } from '../../utils/hours'
-import { ui } from '../../styles'
+import { groupHours, isOpenNow } from '../../utils/hours'
+import { cx, ui } from '../../styles'
 
 /** Everything public about a business, in cards. */
 export default function AboutPanel({ profile }: { profile: PublicProfile }) {
@@ -44,11 +44,7 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
       )}
 
       {profile.locations.map((l) => (
-        <Card key={l.id} title={`${l.locationName} · ${labelOf(l.locationType)}`}>
-          <Item label="Address" value={[l.addressLine1, l.barangay, l.city, l.province].filter(Boolean).join(', ')} wide />
-          <Item label="Hours" value={hoursSummary(l.operatingHours)} wide />
-          <Item label="Phone" value={l.contactPhone} />
-        </Card>
+        <LocationCard key={l.id} location={l} />
       ))}
 
       {profile.contacts.length > 0 && (
@@ -87,7 +83,19 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
       </Card>
 
       <Card title="Payment">
-        <Item label="Accepts" value={profile.paymentTypes.map(labelOf).join(', ')} wide />
+        <DetailItem label="Accepts" wide>
+          {profile.paymentTypes.length > 0 ? (
+            <span className="mt-1 flex flex-wrap gap-1.5">
+              {profile.paymentTypes.map((type) => (
+                <span key={type} className={ui.chip}>
+                  {labelOf(type)}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-muted">No payment methods listed yet. Ask the business when you order.</span>
+          )}
+        </DetailItem>
         <Item label="Terms" value={paymentTerms.paymentTerms.map(labelOf).join(', ')} wide />
         <Item label="Down payment" value={paymentTerms.downPaymentPercentage !== null ? `${paymentTerms.downPaymentPercentage}%` : ''} />
         <Item label="Credit days" value={paymentTerms.creditDays !== null ? String(paymentTerms.creditDays) : ''} />
@@ -127,6 +135,115 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         </Card>
       )}
     </DetailsGrid>
+  )
+}
+
+/** A location: its address (with a map link), phone, and opening hours day by day. */
+function LocationCard({ location: l }: { location: Location }) {
+  const address = [l.addressLine1, l.addressLine2, l.barangay, l.city, l.province].filter(Boolean).join(', ')
+  const mapQuery = l.latitude !== null && l.longitude !== null ? `${l.latitude},${l.longitude}` : [address, l.country].filter(Boolean).join(', ')
+  const groups = groupHours(l.operatingHours)
+  const open = isOpenNow(l.operatingHours)
+
+  return (
+    <section className={cx(ui.card, 'flex flex-col gap-4 px-6 py-5.5')}>
+      <div>
+        <h3 className={cx(ui.h3, 'mb-0.5')}>{l.locationName}</h3>
+        <span className="text-[0.85rem] text-muted">
+          {labelOf(l.locationType)}
+          {l.isPrimary && ' · Main location'}
+        </span>
+      </div>
+
+      {address && (
+        <div className="flex items-start gap-2.5">
+          <PinIcon />
+          <div className="min-w-0">
+            <p className="m-0 leading-snug text-heading">{address}</p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[0.85rem] font-semibold text-accent"
+            >
+              Open in Google Maps
+            </a>
+          </div>
+        </div>
+      )}
+
+      {l.contactPhone && (
+        <div className="flex items-center gap-2.5">
+          <PhoneIcon />
+          <a href={`tel:${l.contactPhone.replace(/\s/g, '')}`} className="text-heading no-underline hover:underline">
+            {l.contactPhone}
+          </a>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2.5">
+          <ClockIcon />
+          <span className="font-semibold text-heading">Opening hours</span>
+          {open !== null && (
+            <span
+              className={cx(
+                'ml-auto rounded-full px-2.5 py-0.5 text-[0.75rem] font-bold',
+                open ? 'bg-info-soft text-info' : 'bg-danger-soft text-danger',
+              )}
+            >
+              {open ? 'Open now' : 'Closed now'}
+            </span>
+          )}
+        </div>
+        {open === null ? (
+          <p className="m-0 pl-7 text-muted">Not set</p>
+        ) : (
+          <dl className="m-0 flex flex-col gap-1 pl-7 text-[0.9rem]">
+            {groups.map((g) => (
+              <div
+                key={g.days}
+                className={cx('flex justify-between gap-4 rounded-md px-2 py-1', g.today && 'bg-chip font-semibold text-heading')}
+              >
+                <dt className={g.today ? 'text-heading' : 'text-muted'}>
+                  {g.days}
+                  {g.today && ' (today)'}
+                </dt>
+                <dd className={cx('m-0 text-right tabular-nums', g.closed ? 'text-muted' : 'text-heading')}>{g.time}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    </section>
+  )
+}
+
+const iconClass = 'mt-0.5 size-4.5 shrink-0 text-muted'
+
+function PinIcon() {
+  return (
+    <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+function PhoneIcon() {
+  return (
+    <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg className={cx(iconClass, 'mt-0')} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
   )
 }
 
