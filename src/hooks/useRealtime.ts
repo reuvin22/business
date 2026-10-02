@@ -1,0 +1,54 @@
+import { limitToLast, onValue, orderByChild, query, ref } from 'firebase/database'
+import { useEffect, useState } from 'react'
+import { rtdb } from '../firebase'
+
+// How many of the newest messages a chat shows (the same as the API)
+const MESSAGE_LIMIT = 200
+
+type State<T> = { key: string | null; data: T | undefined; error: string }
+
+/**
+ * The newest messages at a path in the Realtime Database, oldest first, updating live.
+ * Pass null to wait (e.g. until the API has granted access).
+ */
+export function useRealtimeMessages<T extends { createdAt: number }>(path: string | null) {
+  return useRealtime<(T & { id: string })[]>(path, (value) =>
+    Object.entries((value ?? {}) as Record<string, T>)
+      .map(([id, item]) => ({ ...item, id }))
+      .sort((a, b) => a.createdAt - b.createdAt),
+  )
+}
+
+/** Any value at a path in the Realtime Database, updating live. Pass null to wait. */
+export function useRealtimeValue<T>(path: string | null) {
+  return useRealtime<T | null>(path, (value) => (value ?? null) as T | null)
+}
+
+function useRealtime<T>(path: string | null, read: (value: unknown) => T) {
+  const [state, setState] = useState<State<T>>({ key: path, data: undefined, error: '' })
+
+  useEffect(() => {
+    if (!path) return
+    // A list of messages: only the newest ones (ordered by createdAt, indexed in database.rules.json)
+    const target = path.endsWith('/messages')
+      ? query(ref(rtdb, path), orderByChild('createdAt'), limitToLast(MESSAGE_LIMIT))
+      : ref(rtdb, path)
+    return onValue(
+      target,
+      (snapshot) => setState({ key: path, data: read(snapshot.val()), error: '' }),
+      (error) =>
+        setState({
+          key: path,
+          data: undefined,
+          error: error.message.includes('permission_denied')
+            ? "You can't read this chat. If the database rules were just deployed, reload the page."
+            : error.message,
+        }),
+    )
+    // read is the same function on every render of a given caller
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path])
+
+  const current = state.key === path
+  return { data: current ? state.data : undefined, error: current ? state.error : '' }
+}

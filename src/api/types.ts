@@ -495,6 +495,30 @@ export type Message = Saved & {
   readAt: number | null
 }
 
+/** A message in the team or market channel (from the Realtime Database). */
+export type ChatMessage = {
+  id: string
+  senderUid: string
+  senderName: string
+  businessId: string
+  businessName: string
+  businessLogo: string
+  message: string
+  createdAt: number
+}
+
+/** A direct message as saved in the Realtime Database (chat/dm/{conversationId}/messages). */
+export type LiveMessage = {
+  id: string
+  senderUid: string
+  senderName: string
+  senderBusinessId: string
+  message: string
+  createdAt: number
+}
+
+export type ChatAccess = { uid: string; businessId: string; teamPath: string; marketPath: string }
+
 // ---- Directory -------------------------------------------------------------------------
 
 export type PublicContact = Pick<
