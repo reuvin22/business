@@ -4,7 +4,7 @@ import { createBusiness, listMyBusinesses } from '../api/businesses'
 import { listCategories } from '../api/directory'
 import type { BusinessIn } from '../api/types'
 import FieldForm from '../components/FieldForm'
-import { BusinessLogo, EmptyState, ErrorBox, Loading, PageHeader, VerifiedBadge } from '../components/ui'
+import { BusinessCover, EmptyState, ErrorBox, Loading, PageHeader, VerifiedBadge } from '../components/ui'
 import { labelOf } from '../constants/options'
 import { businessSections, newBusinessValues } from '../forms/definitions'
 import { useLoad } from '../hooks/useLoad'
@@ -52,13 +52,21 @@ export default function MyBusinessesPage() {
       {loading ? (
         <Loading />
       ) : businesses?.length ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 max-sm:grid-cols-2 max-sm:gap-3">
           {businesses.map((b) => (
-            <Link key={b.id} to={`/business/${b.id}`} className="flex min-h-45 flex-col items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-4 py-5 text-center no-underline transition hover:-translate-y-0.75 hover:border-accent hover:shadow-xl">
-              <BusinessLogo name={b.businessName} src={b.businessLogo} />
-              <span className="text-[1.2rem] font-bold wrap-break-word text-heading">{b.businessName}</span>
-              <span className="text-[0.8rem] text-muted">{b.businessTypes.map(labelOf).join(' · ')}</span>
-              <VerifiedBadge status={b.verificationStatus} level={b.verificationLevel} />
+            <Link
+              key={b.id}
+              to={`/business/${b.id}`}
+              className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-surface no-underline transition hover:-translate-y-0.5 hover:border-accent hover:shadow-lg"
+            >
+              <BusinessCover name={b.businessName} src={b.businessLogo} />
+              <div className="flex flex-1 flex-col gap-1.5 p-3.5 max-sm:p-3">
+                <span className="line-clamp-2 text-[1.05rem] leading-snug font-bold text-heading group-hover:text-accent">{b.businessName}</span>
+                <span className="line-clamp-1 text-[0.8rem] text-muted">{b.businessTypes.map(labelOf).join(' · ')}</span>
+                <span className="mt-auto pt-1">
+                  <VerifiedBadge status={b.verificationStatus} level={b.verificationLevel} />
+                </span>
+              </div>
             </Link>
           ))}
         </div>

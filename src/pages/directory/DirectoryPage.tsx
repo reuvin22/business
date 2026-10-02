@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { searchBusinesses, type DirectoryFilters } from '../../api/directory'
-import { BusinessLogo, EmptyState, ErrorBox, Loading, PageHeader, Stars, VerifiedBadge } from '../../components/ui'
+import { BusinessCover, EmptyState, ErrorBox, Loading, PageHeader, Stars, VerifiedBadge } from '../../components/ui'
 import { BUSINESS_TYPES, labelOf, SUPPLIER_CAPABILITIES } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { cx, ui } from '../../styles'
@@ -61,33 +61,35 @@ export default function DirectoryPage() {
       ) : !businesses?.length ? (
         <EmptyState text="No businesses match. Try fewer filters." />
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 max-sm:grid-cols-2 max-sm:gap-3">
           {businesses.map((b) => (
-            <Link key={b.id} to={`/dashboard/directory/${b.id}`} className={cx(ui.card, 'flex flex-col gap-2.5 p-4.5 text-inherit no-underline transition hover:-translate-y-0.5 hover:border-accent')}>
-              <div className="flex items-center gap-3">
-                <BusinessLogo name={b.businessName} src={b.businessLogo} small />
-                <div className="flex min-w-0 flex-col">
-                  <strong className="text-[1.02rem] text-heading">{b.businessName}</strong>
-                  <span className="text-[0.82rem] text-muted">
-                    {b.businessTypes.map(labelOf).join(' · ')}
-                    {b.primaryCity && ` · ${b.primaryCity}`}
-                  </span>
+            <Link
+              key={b.id}
+              to={`/dashboard/directory/${b.id}`}
+              className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-surface text-inherit no-underline transition hover:-translate-y-0.5 hover:border-accent hover:shadow-lg"
+            >
+              <BusinessCover name={b.businessName} src={b.businessLogo} />
+              <div className="flex flex-1 flex-col gap-1.5 p-3.5 max-sm:p-3">
+                <strong className="line-clamp-2 text-[1rem] leading-snug text-heading group-hover:text-accent">{b.businessName}</strong>
+                <span className="line-clamp-1 text-[0.8rem] text-muted">
+                  {b.businessTypes.map(labelOf).join(' · ')}
+                  {b.primaryCity && ` · ${b.primaryCity}`}
+                </span>
+                <p className="line-clamp-2 text-[0.85rem] max-sm:hidden">{b.businessDescription || b.industry || 'No description yet.'}</p>
+                {b.capabilities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 max-sm:hidden">
+                    {b.capabilities.slice(0, 3).map((c) => (
+                      <span key={c} className={ui.chip}>
+                        {SUPPLIER_CAPABILITIES.find((o) => o.value === c)?.label ?? c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1.5">
+                  <Stars rating={b.ratingAverage} count={b.ratingCount} />
+                  <VerifiedBadge status={b.verificationStatus} level={b.verificationLevel} />
                 </div>
               </div>
-              <p className="line-clamp-3 text-[0.88rem]">{b.businessDescription || b.industry || 'No description yet.'}</p>
-              <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-                <Stars rating={b.ratingAverage} count={b.ratingCount} />
-                <VerifiedBadge status={b.verificationStatus} level={b.verificationLevel} />
-              </div>
-              {b.capabilities.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {b.capabilities.slice(0, 4).map((c) => (
-                    <span key={c} className={ui.chip}>
-                      {SUPPLIER_CAPABILITIES.find((o) => o.value === c)?.label ?? c}
-                    </span>
-                  ))}
-                </div>
-              )}
             </Link>
           ))}
         </div>

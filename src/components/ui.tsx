@@ -301,8 +301,22 @@ export function Td({ children, num, strong, wrap, actions, colSpan, className }:
 /** The business's logo, or its first letter when it has no logo. */
 export function BusinessLogo({ name, src, small }: { name: string; src: string; small?: boolean }) {
   const size = small ? 'size-11 rounded-[10px] text-base' : 'size-16 rounded-[14px] text-[1.4rem]'
-  if (src) return <img src={src} alt="" className={cx(size, 'shrink-0 object-cover')} />
+  const [failed, setFailed] = useState(false) // a link that no longer works shows the letters instead
+  if (src && !failed) return <img src={src} alt="" onError={() => setFailed(true)} className={cx(size, 'shrink-0 object-cover')} />
   return <span className={cx(size, 'grid shrink-0 place-items-center bg-chip font-extrabold text-accent')}>{initials(name)}</span>
+}
+
+/** The business's logo as the big square picture of a card, or its initials when it has none. */
+export function BusinessCover({ name, src }: { name: string; src: string }) {
+  const [failed, setFailed] = useState(false)
+  if (src && !failed) {
+    return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className="block aspect-square w-full bg-chip object-cover" />
+  }
+  return (
+    <span className="grid aspect-square w-full place-items-center bg-chip text-[3rem] font-extrabold tracking-wide text-accent" aria-hidden="true">
+      {initials(name)}
+    </span>
+  )
 }
 
 const THUMB_SIZES = {
