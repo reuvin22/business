@@ -1,10 +1,11 @@
-// Editors for small lists inside a form: product images and name/value pairs.
+// Editors for small lists inside a form: product photos/videos and name/value pairs.
 import { useState } from 'react'
-import { uploadImage } from '../api/uploads'
-import type { ProductImage } from '../api/types'
+import { IMAGE_TYPES, MAX_UPLOAD_LABEL, uploadProductMedia, VIDEO_TYPES } from '../api/uploads'
+import type { MediaType, ProductImage } from '../api/types'
 import { cx, ui } from '../styles'
 import { shrinkImage } from '../utils/image'
 import { FormSection } from './FieldForm'
+import { isVideo } from '../utils/media'
 import { ErrorBox, Spinner } from './ui'
 
 export type Pair = { name: string; value: string }
@@ -48,7 +49,7 @@ export function PairsEditor({
   )
 }
 
-/** Product images: upload from your device (or paste a link). Optional; one is the primary image. */
+/** Product photos and videos: upload from your device (or paste an image link). Optional; one image is the primary. */
 export function ImagesEditor({
   businessId,
   images,
@@ -62,15 +63,17 @@ export function ImagesEditor({
   const [error, setError] = useState('')
   const [link, setLink] = useState('')
 
-  const add = (imageUrl: string, list: ProductImage[]) => [
+  // Only an image can be the primary: the first image becomes it when there is none yet
+  const add = (imageUrl: string, mediaType: MediaType, list: ProductImage[]) => [
     ...list,
-    { imageUrl, sortOrder: list.length, isPrimary: list.length === 0 },
+    { imageUrl, mediaType, sortOrder: list.length, isPrimary: mediaType === 'IMAGE' && !list.some((item) => item.isPrimary) },
   ]
   const makePrimary = (index: number) => onChange(images.map((image, i) => ({ ...image, isPrimary: i === index })))
   const remove = (index: number) => {
     const rest = images.filter((_, i) => i !== index)
     // Keep one primary image when the primary one is removed
-    if (rest.length && !rest.some((image) => image.isPrimary)) rest[0] = { ...rest[0], isPrimary: true }
+    const firstImage = rest.findIndex((item) => !isVideo(item))
+    if (firstImage >= 0 && !rest.some((item) => item.isPrimary)) rest[firstImage] = { ...rest[firstImage], isPrimary: true }
     onChange(rest)
   }
 
@@ -79,13 +82,17 @@ export function ImagesEditor({
     setError('')
     setUploading(files.length)
     let list = images
+    const errors: string[] = []
     for (const file of files) {
       try {
-        const { blob, name } = await shrinkImage(file)
-        list = add(await uploadImage(businessId, blob, name), list)
+        // Photos are shrunk in the browser first; videos are sent as they are
+        const { blob, name } = file.type.startsWith('video/') ? { blob: file, name: file.name } : await shrinkImage(file)
+        const uploaded = await uploadProductMedia(businessId, blob, name)
+        list = add(uploaded.url, uploaded.mediaType, list)
         onChange(list)
       } catch (err) {
-        setError(`${file.name}: ${(err as Error).message}`)
+        errors.push(`${file.name}: ${(err as Error).message}`)
+        setError(errors.join('; '))
       } finally {
         setUploading((n) => n - 1)
       }
@@ -93,41 +100,51 @@ export function ImagesEditor({
   }
 
   return (
-    <FormSection title="Images (optional)" hint="Upload photos from your device. The primary image is shown first in lists.">
+    <FormSection
+      title="Photos and videos (optional)"
+      hint="Upload as many as you like from your device. The primary image is shown first in lists."
+    >
       <div className="flex flex-col gap-3">
         {images.length > 0 && (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
-            {images.map((image, i) => (
-              <figure key={image.imageUrl + i} className="m-0 flex flex-col gap-1.5">
-                <img
-                  src={image.imageUrl}
-                  alt=""
-                  className={cx(
-                    'aspect-square w-full rounded-lg border-2 bg-chip object-cover',
-                    image.isPrimary ? 'border-accent' : 'border-transparent',
+            {images.map((image, i) => {
+              const tileClass = cx(
+                'aspect-square w-full rounded-lg border-2 bg-chip object-cover',
+                image.isPrimary ? 'border-accent' : 'border-transparent',
+              )
+              return (
+                <figure key={image.imageUrl + i} className="m-0 flex flex-col gap-1.5">
+                  {isVideo(image) ? (
+                    <video src={image.imageUrl} controls muted playsInline preload="metadata" className={tileClass} />
+                  ) : (
+                    <img src={image.imageUrl} alt="" className={tileClass} />
                   )}
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <label className={ui.checkboxLabel}>
-                    <input type="radio" className={ui.checkbox} name="primary-image" checked={image.isPrimary} onChange={() => makePrimary(i)} />
-                    <span>Primary</span>
-                  </label>
-                  <button type="button" className={ui.linkDanger} onClick={() => remove(i)}>
-                    Remove
-                  </button>
-                </div>
-              </figure>
-            ))}
+                  <div className="flex items-center justify-between gap-2">
+                    {isVideo(image) ? (
+                      <span className={ui.hint}>Video</span>
+                    ) : (
+                      <label className={ui.checkboxLabel}>
+                        <input type="radio" className={ui.checkbox} name="primary-image" checked={image.isPrimary} onChange={() => makePrimary(i)} />
+                        <span>Primary</span>
+                      </label>
+                    )}
+                    <button type="button" className={ui.linkDanger} onClick={() => remove(i)}>
+                      Remove
+                    </button>
+                  </div>
+                </figure>
+              )
+            })}
           </div>
         )}
 
         <div className="flex flex-wrap items-center gap-3">
           <label className={cx(ui.btnGhost, uploading > 0 && 'pointer-events-none opacity-60')} aria-busy={uploading > 0}>
             {uploading > 0 && <Spinner />}
-            {uploading > 0 ? `Uploading ${uploading}…` : '+ Upload image'}
+            {uploading > 0 ? `Uploading ${uploading}…` : '+ Upload photos or videos'}
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept={`${IMAGE_TYPES},${VIDEO_TYPES}`}
               multiple
               className="hidden"
               onChange={(e) => {
@@ -136,7 +153,7 @@ export function ImagesEditor({
               }}
             />
           </label>
-          <span className={ui.hint}>JPG, PNG, WEBP, or GIF · up to 5 MB</span>
+          <span className={ui.hint}>JPG, PNG, WEBP, GIF, MP4, WEBM, or MOV · up to {MAX_UPLOAD_LABEL} each</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -152,7 +169,7 @@ export function ImagesEditor({
             className={ui.btnGhost}
             disabled={!link.trim().startsWith('http')}
             onClick={() => {
-              onChange(add(link.trim(), images))
+              onChange(add(link.trim(), 'IMAGE', images))
               setLink('')
             }}
           >

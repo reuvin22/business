@@ -173,7 +173,9 @@ export type Category = Saved & { categoryName: string; parentCategoryId: string 
 
 export type Brand = Saved & { brandName: string; description: string; logo: string; website: string; status: string }
 
-export type ProductImage = { imageUrl: string; sortOrder: number; isPrimary: boolean }
+/** A product photo or video. Only an image can be the primary (the thumbnail in lists). */
+export type ProductImage = { imageUrl: string; mediaType?: MediaType; sortOrder: number; isPrimary: boolean }
+export type MediaType = 'IMAGE' | 'VIDEO'
 export type Specification = { name: string; value: string }
 export type OrderRules = {
   minimumOrderQuantity: number

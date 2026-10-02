@@ -1,6 +1,6 @@
 # my-business-fe
 
-React + TypeScript + Vite frontend for the My Business B2B platform. Data lives in the backend (**my-business-be**, FastAPI + Firestore); this app handles login with Firebase and talks to the API.
+React + TypeScript + Vite frontend for **SIRIS — Supplier Inventory & Retail Integration System**, a B2B platform. Data lives in the backend (**my-business-be**, FastAPI + Firestore); this app handles login with Firebase and talks to the API.
 
 ## Run it
 

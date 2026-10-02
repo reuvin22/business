@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { uploadImage } from '../api/uploads'
+import { IMAGE_TYPES, uploadImage } from '../api/uploads'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import { cx, ui } from '../styles'
 import { shrinkImage } from '../utils/image'
@@ -257,7 +257,7 @@ function ImageInput({
             {uploading ? 'Uploading…' : url ? 'Replace image' : '+ Upload image'}
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept={IMAGE_TYPES}
               className="hidden"
               onChange={(e) => {
                 handleFile(e.target.files?.[0])

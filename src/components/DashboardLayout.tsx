@@ -15,7 +15,7 @@ export default function DashboardLayout() {
   if (me?.isAdmin) items.push({ to: '/dashboard/admin', label: 'Platform admin', icon: <AdminIcon /> })
 
   return (
-    <SidebarLayout title="My Business" items={items}>
+    <SidebarLayout title="SIRIS" items={items}>
       <Outlet />
     </SidebarLayout>
   )

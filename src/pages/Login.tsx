@@ -119,6 +119,10 @@ export default function Login() {
   return (
     <main className="grid min-h-screen place-items-center px-4 py-6">
       <div className={cx(ui.card, 'max-w-100 shadow-xl')}>
+        <p className="mb-4 text-[0.8rem] leading-snug text-muted">
+          <span className="block text-[1.1rem] font-extrabold tracking-wide text-accent">SIRIS</span>
+          Supplier Inventory &amp; Retail Integration System
+        </p>
         <h1 className={ui.h1}>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h1>
         <p className={cx(ui.subtitle, 'mb-6')}>
           {mode === 'signin'

@@ -5,6 +5,7 @@ import { labelOf } from '../constants/options'
 import type { Tab } from '../hooks/useTab'
 import { cx, ui } from '../styles'
 import { initials } from '../utils/format'
+import { isVideo } from '../utils/media'
 
 /** A small spinning circle in the current text color. */
 export function Spinner({ className }: { className?: string }) {
@@ -310,15 +311,16 @@ const THUMB_SIZES = {
   lg: 'aspect-square w-full max-w-80 rounded-xl',
 }
 
-/** A product's primary image, or a grey placeholder when it has none (images are optional). */
+/** A product's primary image, or a grey placeholder when it has none (images are optional; videos are skipped). */
 export function ProductThumb({
   images,
   size = 'sm',
 }: {
-  images: { imageUrl: string; isPrimary: boolean }[]
+  images: { imageUrl: string; isPrimary: boolean; mediaType?: string }[]
   size?: keyof typeof THUMB_SIZES
 }) {
-  const image = images.find((i) => i.isPrimary) ?? images[0]
+  const photos = images.filter((i) => !isVideo(i))
+  const image = photos.find((i) => i.isPrimary) ?? photos[0]
   if (image) return <img src={image.imageUrl} alt="" loading="lazy" className={cx(THUMB_SIZES[size], 'shrink-0 bg-chip object-cover')} />
   return (
     <span className={cx(THUMB_SIZES[size], 'grid shrink-0 place-items-center bg-chip text-muted')} aria-label="No image">
