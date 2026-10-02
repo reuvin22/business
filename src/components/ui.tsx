@@ -233,7 +233,12 @@ export function ConfirmButton({
 
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-line" role="tablist">
+    // The bottom line is a shadow inside the bar (not a border the tabs overlap), so nothing sticks out
+    // and no scrollbar appears; on narrow screens the tabs still swipe sideways, without a visible scrollbar
+    <div
+      className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--color-line)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      role="tablist"
+    >
       {tabs.map((tab) => (
         <button
           key={tab.key}
@@ -241,7 +246,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
           role="tab"
           aria-selected={active === tab.key}
           className={cx(
-            '-mb-px cursor-pointer border-0 border-b-2 bg-transparent px-3.5 py-2.5 text-[0.9rem] font-semibold whitespace-nowrap',
+            'shrink-0 cursor-pointer border-0 border-b-2 bg-transparent px-3.5 py-2.5 text-[0.9rem] font-semibold whitespace-nowrap',
             active === tab.key ? 'border-accent text-heading' : 'border-transparent text-muted hover:text-heading',
           )}
           onClick={() => onChange(tab.key)}
