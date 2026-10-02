@@ -306,6 +306,8 @@ export type DeliverySettings = Saved & {
 }
 
 export type DeliveryZone = Saved & {
+  /** "" on zones made before countries were added (= any country) */
+  country: string
   region: string
   province: string
   city: string

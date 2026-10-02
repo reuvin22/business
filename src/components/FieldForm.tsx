@@ -16,13 +16,26 @@ type Props = {
   onCancel?: () => void
   /** Width of the dialog; big forms (e.g. products) use 'xl'. */
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  /** Extra editors shown before the sections (e.g. the area of a delivery zone). */
+  intro?: ReactNode
   /** Extra editors shown after the sections (e.g. opening hours). */
   children?: ReactNode
   /** Given = image fields get an upload button (images are stored under this business). */
   businessId?: string
 }
 
-export default function FieldForm({ title, sections, initial, submitLabel, onSubmit, onCancel, size = 'lg', children, businessId }: Props) {
+export default function FieldForm({
+  title,
+  sections,
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  size = 'lg',
+  intro,
+  children,
+  businessId,
+}: Props) {
   const [state, setState] = useState<FormState>(() => toFormState(sections, initial))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -48,6 +61,8 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
   const form = (
     <form className={onCancel ? ui.modalForm : ui.formCard} onSubmit={handleSubmit} noValidate>
       {title && <h2 className={ui.h2}>{title}</h2>}
+
+      {intro}
 
       {sections.map((section, sectionIndex) => (
         <FormSection key={section.title} title={section.title} hint={section.hint}>

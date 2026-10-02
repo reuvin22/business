@@ -10,6 +10,7 @@ import type { DeliverySettings, DeliveryZone, PaymentMethod, PaymentTerms, Retur
 import { useBusiness } from '../../businessContext'
 import ResourceSection from '../../components/ResourceSection'
 import SettingsForm from '../../components/SettingsForm'
+import DeliveryZoneForm from './DeliveryZoneForm'
 import { Badge, PageHeader, Tabs } from '../../components/ui'
 import { labelOf } from '../../constants/options'
 import * as forms from '../../forms/definitions'
@@ -52,11 +53,12 @@ export default function CommercePage() {
             resource={deliveryZonesApi}
             sections={forms.deliveryZoneSections}
             newValues={forms.newDeliveryZoneValues}
+            renderForm={(zone, save, close) => <DeliveryZoneForm key={zone?.id ?? 'new'} zone={zone} save={save} close={close} />}
             canEdit={canEdit}
             addLabel="+ Add zone"
             emptyText="No zones: the standard delivery fee applies everywhere."
             columns={[
-              { label: 'Area', render: (z) => [z.barangay, z.city, z.province, z.region].filter(Boolean).join(', ') },
+              { label: 'Area', render: (z) => [z.barangay, z.city, z.province, z.region, z.country].filter(Boolean).join(', ') },
               { label: 'Fee', num: true, render: (z) => money(z.deliveryFee) },
               { label: 'Days', num: true, render: (z) => z.estimatedDays ?? '—' },
             ]}

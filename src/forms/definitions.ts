@@ -301,21 +301,17 @@ export const deliverySections: Section[] = [
   },
 ]
 
+// The area of a zone is picked with PlacePicker (see pages/business/DeliveryZoneForm.tsx)
 export const deliveryZoneSections: Section[] = [
   {
-    title: 'Delivery zone',
-    hint: 'Fill in the area this fee applies to. The most specific match wins: barangay > city > province > region.',
+    title: 'Fee',
     fields: [
-      { key: 'region', label: 'Region' },
-      { key: 'province', label: 'Province' },
-      { key: 'city', label: 'City / municipality' },
-      { key: 'barangay', label: 'Barangay' },
       { key: 'deliveryFee', label: 'Delivery fee', type: 'number', required: true },
       { key: 'estimatedDays', label: 'Estimated days', type: 'number' },
     ],
   },
 ]
-export const newDeliveryZoneValues = { deliveryFee: 0 }
+export const newDeliveryZoneValues = { country: 'Philippines', deliveryFee: 0 }
 
 export const paymentMethodSections: Section[] = [
   {
