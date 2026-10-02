@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { IMAGE_TYPES, uploadImage } from '../api/uploads'
+import { IMAGE_TYPES, MAX_UPLOAD_LABEL, uploadImage } from '../api/uploads'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import { cx, ui } from '../styles'
 import { shrinkImage } from '../utils/image'
@@ -163,7 +163,7 @@ function FieldInput({
 
   const text = typeof value === 'string' ? value : ''
   if (field.type === 'image') {
-    return <ImageInput label={label} hint={hint} field={field} url={text} onChange={onChange} businessId={businessId} />
+    return <ImageInput label={label} hint={hint} url={text} onChange={onChange} businessId={businessId} />
   }
 
   let input: ReactNode
@@ -213,18 +213,16 @@ function FieldInput({
   )
 }
 
-/** An image link with a preview, plus an upload button when we know which business it belongs to. */
+/** An image with a preview and an upload button (once we know which business it belongs to). */
 function ImageInput({
   label,
   hint,
-  field,
   url,
   onChange,
   businessId,
 }: {
   label: string
   hint: ReactNode
-  field: FieldDef
   url: string
   onChange: (value: string) => void
   businessId?: string
@@ -271,15 +269,8 @@ function ImageInput({
             Remove
           </button>
         )}
+        {businessId && <span className={ui.hint}>JPG, PNG, WEBP, or GIF · up to {MAX_UPLOAD_LABEL}</span>}
       </div>
-      <input
-        type="url"
-        className={ui.input}
-        value={url}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={businessId ? `…or paste an image link (${field.placeholder ?? 'https://…'})` : field.placeholder}
-        aria-label={`${field.label} link`}
-      />
       {!businessId && <span className={ui.hint}>You can upload an image after the business is created.</span>}
       {hint}
       <ErrorBox message={error} />

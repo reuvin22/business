@@ -49,7 +49,7 @@ export function PairsEditor({
   )
 }
 
-/** Product photos and videos: upload from your device (or paste an image link). Optional; one image is the primary. */
+/** Product photos and videos, uploaded from your device. Optional; one image is the primary. */
 export function ImagesEditor({
   businessId,
   images,
@@ -61,7 +61,6 @@ export function ImagesEditor({
 }) {
   const [uploading, setUploading] = useState(0)
   const [error, setError] = useState('')
-  const [link, setLink] = useState('')
 
   // Only an image can be the primary: the first image becomes it when there is none yet
   const add = (imageUrl: string, mediaType: MediaType, list: ProductImage[]) => [
@@ -154,27 +153,6 @@ export function ImagesEditor({
             />
           </label>
           <span className={ui.hint}>JPG, PNG, WEBP, GIF, MP4, WEBM, or MOV · up to {MAX_UPLOAD_LABEL} each</span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="url"
-            className={ui.rowInput}
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="…or paste an image link (https://…)"
-          />
-          <button
-            type="button"
-            className={ui.btnGhost}
-            disabled={!link.trim().startsWith('http')}
-            onClick={() => {
-              onChange(add(link.trim(), 'IMAGE', images))
-              setLink('')
-            }}
-          >
-            Add link
-          </button>
         </div>
         <ErrorBox message={error} />
       </div>
