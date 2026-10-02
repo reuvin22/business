@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { startConversation } from '../../api/network'
 import { placeOrder, quoteOrder } from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { Address, Business, Location, OrderIn, Price, PublicProduct, PublicProfile, Quote } from '../../api/types'
@@ -360,6 +361,16 @@ function CheckoutDialog({
         return
       }
       const order = await placeOrder(buyer.id, body)
+      // Once, right after placing it: a message to the seller with the order as a card, asking them to confirm it
+      try {
+        await startConversation(buyer.id, {
+          participantBusinessId: seller.id,
+          message: `Hi ${seller.businessName}! I placed order ${order.orderNumber}. Please confirm this order.`,
+          orderId: order.id,
+        })
+      } catch {
+        // The order is placed either way (e.g. this member may not send messages); the seller is still notified
+      }
       navigate(`/business/${buyer.id}/orders/${order.id}`)
     } catch (err) {
       setError((err as Error).message)
