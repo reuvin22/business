@@ -73,8 +73,19 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
   const money = (n: number | null) => formatMoney(n, seller.currency)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [checkingOut, setCheckingOut] = useState(false)
+  const [search, setSearch] = useState('')
 
   const rows = orderRows(products)
+  // Search: every word must be in the name, variant, SKU, barcode, or description. Quantities already set stay.
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const shown = rows.filter((row) => {
+    const variant = row.product.variants.find((v) => v.id === row.variantId)
+    const text = [row.name, row.product.sku, row.product.barcode, variant?.sku, variant?.barcode, row.product.description]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return words.every((word) => text.includes(word))
+  })
   const items = rows
     .map((row) => ({ productId: row.product.id, variantId: row.variantId, quantity: quantities[row.key] ?? 0 }))
     .filter((item) => item.quantity > 0)
@@ -84,74 +95,107 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
 
   return (
     <div className="flex flex-col gap-4.5">
-      <div className={ui.tableWrap}>
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th className={ui.th}>Product</th>
-              <th className={ui.th}>Price</th>
-              <th className={ui.th}>Order rules</th>
-              {buyer && <th className={cx(ui.th, ui.num)}>Quantity</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const rules = row.product.orderRules
-              const myPrice = row.product.customerPrices.find((cp) => cp.variantId === null || cp.variantId === row.variantId)
-              const tiers = tiersFor(row)
-              return (
-                <tr key={row.key}>
-                  <td className={cx(ui.td, ui.strong)}>
-                    <span className={ui.rowLink}>
-                      <ProductThumb images={row.product.images} size="md" />
-                      <span>
-                        {row.name}
-                        {row.product.description && <span className="block text-[0.82rem] font-normal whitespace-normal text-muted">{row.product.description}</span>}
-                      </span>
-                    </span>
-                  </td>
-                  <td className={ui.td}>
-                    <div className="flex min-w-44 flex-col gap-1.5">
-                      {myPrice && (
-                        <div className="flex items-baseline justify-between gap-3 rounded-md bg-info-soft px-2 py-1">
-                          <strong className="text-info tabular-nums">{money(myPrice.price)}</strong>
-                          <span className="text-[0.78rem] text-info">your price · {myPrice.minimumQuantity}+ {row.unit}</span>
-                        </div>
-                      )}
-                      {tiers.map((tier) => (
-                        <div key={tier.id} className="flex items-baseline justify-between gap-3">
-                          <strong className="text-heading tabular-nums">{money(tier.price)}</strong>
-                          <span className="text-[0.8rem] whitespace-nowrap text-muted">
-                            {rangeText(tier, row.unit)}
-                            {tier.customerType && ` · ${labelOf(tier.customerType)} only`}
-                          </span>
-                        </div>
-                      ))}
-                      {!myPrice && tiers.length === 0 && <span className="text-muted">Ask for price</span>}
-                    </div>
-                  </td>
-                  <td className={cx(ui.td, ui.small)}>
-                    <span className="block">Min. order {rules.minimumOrderQuantity} {row.unit}</span>
-                    {rules.orderMultiple > 1 && <span className="block text-muted">In multiples of {rules.orderMultiple}</span>}
-                    {rules.leadTimeDays !== null && <span className="block text-muted">{rules.leadTimeDays} day lead time</span>}
-                  </td>
-                  {buyer && (
-                    <td className={cx(ui.td, ui.num)}>
-                      <QuantityStepper
-                        value={quantities[row.key] ?? 0}
-                        min={rules.minimumOrderQuantity}
-                        step={rules.orderMultiple}
-                        label={row.name}
-                        onChange={(quantity) => setQuantities((q) => ({ ...q, [row.key]: quantity }))}
-                      />
-                    </td>
-                  )}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          className={cx(ui.input, 'max-w-md flex-1')}
+          placeholder="Search products by name, SKU, or barcode…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search products"
+        />
+        <span className={ui.hint}>{words.length ? `${shown.length} of ${rows.length} products` : `${rows.length} products`}</span>
       </div>
+
+      {shown.length === 0 ? (
+        <p className={cx(ui.hint, 'm-0 rounded-lg border border-dashed border-line px-4 py-8 text-center')}>
+          No products match "{search}".{' '}
+          <button type="button" className={ui.link} onClick={() => setSearch('')}>
+            Show all
+          </button>
+        </p>
+      ) : (
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th className={ui.th}>Product</th>
+                <th className={ui.th}>Price</th>
+                <th className={ui.th}>Order rules</th>
+                {buyer && <th className={cx(ui.th, ui.num)}>Quantity</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row) => {
+                const rules = row.product.orderRules
+                const myPrice = row.product.customerPrices.find((cp) => cp.variantId === null || cp.variantId === row.variantId)
+                const tiers = tiersFor(row)
+                return (
+                  <tr key={row.key}>
+                    <td className={cx(ui.td, ui.strong)}>
+                      <span className={ui.rowLink}>
+                        <ProductThumb images={row.product.images} size="md" />
+                        <span>
+                          {row.name}
+                          {row.product.description && (
+                            <span className="block text-[0.82rem] font-normal whitespace-normal text-muted">{row.product.description}</span>
+                          )}
+                        </span>
+                      </span>
+                    </td>
+                    <td className={ui.td}>
+                      <div className="flex min-w-44 flex-col gap-1.5">
+                        {myPrice && (
+                          <div className="flex items-baseline justify-between gap-3 rounded-md bg-info-soft px-2 py-1">
+                            <strong className="text-info tabular-nums">{money(myPrice.price)}</strong>
+                            <span className="text-[0.78rem] text-info">
+                              your price · {myPrice.minimumQuantity}+ {row.unit}
+                            </span>
+                          </div>
+                        )}
+                        {tiers.map((tier) => (
+                          <div key={tier.id} className="flex items-baseline justify-between gap-3">
+                            <strong className="text-heading tabular-nums">{money(tier.price)}</strong>
+                            <span className="text-[0.8rem] whitespace-nowrap text-muted">
+                              {rangeText(tier, row.unit)}
+                              {tier.customerType && ` · ${labelOf(tier.customerType)} only`}
+                            </span>
+                          </div>
+                        ))}
+                        {!myPrice && tiers.length === 0 && <span className="text-muted">Ask for price</span>}
+                      </div>
+                    </td>
+                    <td className={cx(ui.td, ui.small)}>
+                      <span className="block">
+                        Min. order {rules.minimumOrderQuantity} {row.unit}
+                      </span>
+                      {rules.maximumOrderQuantity !== null && (
+                        <span className="block">
+                          Max. order {rules.maximumOrderQuantity} {row.unit}
+                        </span>
+                      )}
+                      {rules.orderMultiple > 1 && <span className="block text-muted">In multiples of {rules.orderMultiple}</span>}
+                      {rules.leadTimeDays !== null && <span className="block text-muted">{rules.leadTimeDays} day lead time</span>}
+                    </td>
+                    {buyer && (
+                      <td className={cx(ui.td, ui.num)}>
+                        <QuantityStepper
+                          value={quantities[row.key] ?? 0}
+                          min={rules.minimumOrderQuantity}
+                          max={rules.maximumOrderQuantity}
+                          step={rules.orderMultiple}
+                          label={row.name}
+                          onChange={(quantity) => setQuantities((q) => ({ ...q, [row.key]: quantity }))}
+                        />
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* What is in the order so far; the delivery and payment details come in the next step */}
       {buyer && items.length > 0 && (
@@ -170,31 +214,35 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
         </div>
       )}
 
-      {buyer && checkingOut && (
-        <CheckoutDialog profile={profile} buyer={buyer} items={items} onClose={() => setCheckingOut(false)} />
-      )}
+      {buyer && checkingOut && <CheckoutDialog profile={profile} buyer={buyer} items={items} onClose={() => setCheckingOut(false)} />}
     </div>
   )
 }
 
-/** − [0] +: the first + jumps to the minimum order; quantities follow the multiple; going under the minimum clears it. */
+/** − [0] +: the first + jumps to the minimum order; quantities follow the multiple; going under the minimum
+ * clears it; it never goes over the maximum order (the seller's limit). */
 function QuantityStepper({
   value,
   min,
+  max,
   step,
   label,
   onChange,
 }: {
   value: number
   min: number
+  max: number | null
   step: number
   label: string
   onChange: (value: number) => void
 }) {
   const start = Math.max(min, step)
-  const up = () => onChange(value === 0 ? start : value + step)
+  const next = value === 0 ? start : value + step
+  const atMax = max !== null && next > max
+  const up = () => !atMax && onChange(next)
   const down = () => onChange(value - step < min ? 0 : value - step)
-  const button = 'grid size-8 cursor-pointer place-items-center rounded-md border border-line bg-surface text-[1.1rem] font-bold text-heading hover:enabled:border-accent disabled:cursor-not-allowed disabled:opacity-40'
+  const button =
+    'grid size-8 cursor-pointer place-items-center rounded-md border border-line bg-surface text-[1.1rem] font-bold text-heading hover:enabled:border-accent disabled:cursor-not-allowed disabled:opacity-40'
 
   return (
     <div className="inline-flex items-center gap-1.5">
@@ -209,10 +257,21 @@ function QuantityStepper({
         className={cx(ui.inputAuto, 'w-16 px-2 py-1.5 text-center tabular-nums', value > 0 && 'border-accent font-bold text-heading')}
         value={value}
         onFocus={(e) => e.target.select()}
-        onChange={(e) => onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+        max={max ?? undefined}
+        onChange={(e) => {
+          const typed = Math.max(0, Math.floor(Number(e.target.value) || 0))
+          onChange(max !== null ? Math.min(typed, max) : typed)
+        }}
         aria-label={`Quantity of ${label}`}
       />
-      <button type="button" className={button} onClick={up} aria-label={`One step more of ${label}`}>
+      <button
+        type="button"
+        className={button}
+        onClick={up}
+        disabled={atMax}
+        title={atMax ? `The most you can order is ${max}` : undefined}
+        aria-label={`One step more of ${label}`}
+      >
         +
       </button>
     </div>
@@ -315,7 +374,8 @@ function CheckoutDialog({
         <header className="border-b border-line px-6 py-4 max-sm:px-4">
           <h2 className={ui.h2}>Order from {seller.businessName}</h2>
           <p className={ui.hint}>
-            As {buyer.businessName}. {seller.businessName} gets these details and accepts or declines the order; you are notified either way.
+            As {buyer.businessName}. {seller.businessName} gets these details and accepts or declines the order; you are notified either
+            way.
           </p>
         </header>
 
@@ -323,7 +383,9 @@ function CheckoutDialog({
           <FormSection title="Delivery">
             <div className="flex flex-col gap-3.5">
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Receive by">
-                {availableMethods.length === 0 && <span className={ui.hint}>The seller has not set how orders are received. Mention it in the notes.</span>}
+                {availableMethods.length === 0 && (
+                  <span className={ui.hint}>The seller has not set how orders are received. Mention it in the notes.</span>
+                )}
                 {availableMethods.map((m) => (
                   <button
                     key={m.value}
@@ -333,7 +395,9 @@ function CheckoutDialog({
                     onClick={() => setMethod(m.value)}
                     className={cx(
                       'cursor-pointer rounded-full border px-4 py-2 text-[0.9rem] font-semibold',
-                      method === m.value ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-heading hover:border-muted',
+                      method === m.value
+                        ? 'border-accent bg-info-soft text-accent'
+                        : 'border-line bg-surface text-heading hover:border-muted',
                     )}
                   >
                     {m.label}
@@ -399,7 +463,13 @@ function CheckoutDialog({
 
           <label className={ui.label}>
             Notes for the seller
-            <textarea className={ui.input} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Deliver before 10 AM" />
+            <textarea
+              className={ui.input}
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Deliver before 10 AM"
+            />
           </label>
 
           <FormSection title="Summary">

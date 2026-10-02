@@ -228,7 +228,13 @@ export const productSections = (brandOptions: Option[], categoryOptions: Option[
     title: 'Order rules for buyers',
     fields: [
       { key: 'minimumOrderQuantity', label: 'Minimum order quantity (MOQ)', type: 'number', required: true },
-      { key: 'maximumOrderQuantity', label: 'Maximum order quantity', type: 'number' },
+      {
+        key: 'maximumOrderQuantity',
+        label: 'Maximum order quantity',
+        type: 'number',
+        placeholder: 'No limit',
+        hint: 'The most one order may have. Leave empty for no limit.',
+      },
       { key: 'orderMultiple', label: 'Order in multiples of', type: 'number', required: true },
       { key: 'minimumOrderValue', label: 'Minimum order value', type: 'number' },
       { key: 'leadTimeDays', label: 'Lead time (days)', type: 'number' },
