@@ -521,7 +521,7 @@ export type LiveMessage = {
 
 export type ChatAccess = { uid: string; businessId: string; teamPath: string; marketPath: string }
 
-export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS'
+export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS' | 'ORDERS'
 
 /** Something that happened to a business: in its history, and live as a notification. */
 export type Activity = {

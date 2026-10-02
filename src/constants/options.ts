@@ -165,6 +165,8 @@ export const STOCK_MOVEMENT_TYPES: Option[] = [
   { value: 'SALE', label: 'Walk-in sale' },
   { value: 'SALE_UNDONE', label: 'Sale undone / voided' },
   { value: 'ORDER_SHIPPED', label: 'Order shipped' },
+  { value: 'ORDER_ACCEPTED', label: 'Order accepted' },
+  { value: 'ORDER_CANCELLED', label: 'Order cancelled (stock back)' },
   { value: 'RECORD_REMOVED', label: 'Record removed' },
 ]
 export const UNITS = ['pcs', 'box', 'case', 'pack', 'set', 'bottle', 'can', 'sack', 'kg', 'g', 'L', 'mL', 'm'].map(

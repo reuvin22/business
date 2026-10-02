@@ -8,7 +8,7 @@ import { LogoutIcon, MenuIcon } from './icons'
 import ThemeSwitch from './ThemeSwitch'
 
 /** group: links with a group are listed under that heading (e.g. Selling, Business) */
-export type NavItem = { to: string; label: string; icon: ReactNode; end?: boolean; group?: string }
+export type NavItem = { to: string; label: string; icon: ReactNode; end?: boolean; group?: string; badge?: ReactNode }
 
 type Props = {
   title: string
@@ -76,6 +76,7 @@ export default function SidebarLayout({ title, header, items, children }: Props)
               >
                 {item.icon}
                 <span className="truncate">{item.label}</span>
+                {item.badge && <span className="ml-auto shrink-0">{item.badge}</span>}
               </NavLink>
             </Fragment>
           ))}

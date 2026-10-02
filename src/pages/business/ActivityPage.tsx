@@ -14,6 +14,7 @@ const ACTIVITY_CATEGORIES: { value: ActivityCategory; label: string }[] = [
   { value: 'PRODUCTS', label: 'Products' },
   { value: 'MESSAGES', label: 'Messages' },
   { value: 'CONNECTIONS', label: 'Connections' },
+  { value: 'ORDERS', label: 'Orders' },
 ]
 
 /** "2026-10-02" -> that day's first or last millisecond, on this computer's clock (so "today" is your today). */
@@ -138,6 +139,7 @@ const GO_TO: Record<ActivityCategory, string> = {
   PRODUCTS: 'Go to the product',
   MESSAGES: 'Open the conversation',
   CONNECTIONS: 'Go to Network',
+  ORDERS: 'Open the order',
 }
 
 /** Everything about one entry of the history, in a dialog (the page stays where it is). */
@@ -165,7 +167,7 @@ function ActivityDetails({ activity: a, onClose }: { activity: Activity; onClose
         {a.detail && (
           <div className="flex flex-col gap-1.5">
             <span className="text-[0.75rem] font-bold tracking-wider text-muted uppercase">
-              {a.category === 'MESSAGES' ? 'Message' : a.category === 'CONNECTIONS' ? 'Note' : 'Details'}
+              {a.category === 'MESSAGES' ? 'Message' : a.category === 'CONNECTIONS' ? 'Note' : a.category === 'ORDERS' ? 'Order' : 'Details'}
             </span>
             <p className="m-0 rounded-lg bg-chip px-3.5 py-3 whitespace-pre-line text-heading">{a.detail}</p>
           </div>

@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { placeOrder, quoteOrder } from '../../api/orders'
 import { locationsApi } from '../../api/resources'
 import type { Address, Business, Location, OrderIn, Price, PublicProduct, PublicProfile, Quote } from '../../api/types'
 import { FormSection } from '../../components/FieldForm'
-import { BusyButton, ErrorBox, ProductThumb } from '../../components/ui'
+import { BusyButton, ErrorBox, Modal, ProductThumb } from '../../components/ui'
 import { FULFILLMENT_METHODS, labelOf } from '../../constants/options'
 import { useLoad } from '../../hooks/useLoad'
 import { formatMoney } from '../../utils/format'
@@ -41,9 +41,6 @@ function addressFromLocation(location: Location, buyer: Business): Address {
   }
 }
 
-// One line of the price check: name, unit price, subtotal
-const QUOTE_LINE = 'grid grid-cols-[1fr_auto_120px] gap-3 text-[0.9rem] [&>strong]:text-right [&>strong]:text-heading'
-
 /** A row you can order: a product, or one of its variants. */
 type Row = { key: string; product: PublicProduct; variantId: string | null; name: string; unit: string }
 
@@ -68,13 +65,177 @@ function tiersFor(row: Row): Price[] {
   return [...tiers].sort((a, b) => a.minimumQuantity - b.minimumQuantity)
 }
 
+/** "1–15 pcs", "50+ pcs" */
+const rangeText = (tier: Price, unit: string) => `${tier.minimumQuantity}${tier.maximumQuantity ? `–${tier.maximumQuantity}` : '+'} ${unit}`
+
 export default function OrderPanel({ profile, products, buyer }: Props) {
+  const seller = profile.business
+  const money = (n: number | null) => formatMoney(n, seller.currency)
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [checkingOut, setCheckingOut] = useState(false)
+
+  const rows = orderRows(products)
+  const items = rows
+    .map((row) => ({ productId: row.product.id, variantId: row.variantId, quantity: quantities[row.key] ?? 0 }))
+    .filter((item) => item.quantity > 0)
+  const units = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  if (rows.length === 0) return <p className={ui.hint}>This business has no public products yet.</p>
+
+  return (
+    <div className="flex flex-col gap-4.5">
+      <div className={ui.tableWrap}>
+        <table className={ui.table}>
+          <thead>
+            <tr>
+              <th className={ui.th}>Product</th>
+              <th className={ui.th}>Price</th>
+              <th className={ui.th}>Order rules</th>
+              {buyer && <th className={cx(ui.th, ui.num)}>Quantity</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const rules = row.product.orderRules
+              const myPrice = row.product.customerPrices.find((cp) => cp.variantId === null || cp.variantId === row.variantId)
+              const tiers = tiersFor(row)
+              return (
+                <tr key={row.key}>
+                  <td className={cx(ui.td, ui.strong)}>
+                    <span className={ui.rowLink}>
+                      <ProductThumb images={row.product.images} size="md" />
+                      <span>
+                        {row.name}
+                        {row.product.description && <span className="block text-[0.82rem] font-normal whitespace-normal text-muted">{row.product.description}</span>}
+                      </span>
+                    </span>
+                  </td>
+                  <td className={ui.td}>
+                    <div className="flex min-w-44 flex-col gap-1.5">
+                      {myPrice && (
+                        <div className="flex items-baseline justify-between gap-3 rounded-md bg-info-soft px-2 py-1">
+                          <strong className="text-info tabular-nums">{money(myPrice.price)}</strong>
+                          <span className="text-[0.78rem] text-info">your price · {myPrice.minimumQuantity}+ {row.unit}</span>
+                        </div>
+                      )}
+                      {tiers.map((tier) => (
+                        <div key={tier.id} className="flex items-baseline justify-between gap-3">
+                          <strong className="text-heading tabular-nums">{money(tier.price)}</strong>
+                          <span className="text-[0.8rem] whitespace-nowrap text-muted">
+                            {rangeText(tier, row.unit)}
+                            {tier.customerType && ` · ${labelOf(tier.customerType)} only`}
+                          </span>
+                        </div>
+                      ))}
+                      {!myPrice && tiers.length === 0 && <span className="text-muted">Ask for price</span>}
+                    </div>
+                  </td>
+                  <td className={cx(ui.td, ui.small)}>
+                    <span className="block">Min. order {rules.minimumOrderQuantity} {row.unit}</span>
+                    {rules.orderMultiple > 1 && <span className="block text-muted">In multiples of {rules.orderMultiple}</span>}
+                    {rules.leadTimeDays !== null && <span className="block text-muted">{rules.leadTimeDays} day lead time</span>}
+                  </td>
+                  {buyer && (
+                    <td className={cx(ui.td, ui.num)}>
+                      <QuantityStepper
+                        value={quantities[row.key] ?? 0}
+                        min={rules.minimumOrderQuantity}
+                        step={rules.orderMultiple}
+                        label={row.name}
+                        onChange={(quantity) => setQuantities((q) => ({ ...q, [row.key]: quantity }))}
+                      />
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* What is in the order so far; the delivery and payment details come in the next step */}
+      {buyer && items.length > 0 && (
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4.5 py-3.5 shadow-xl">
+          <span className="text-heading">
+            <strong>{items.length}</strong> {items.length === 1 ? 'product' : 'products'} · <strong>{units}</strong> units
+          </span>
+          <div className="flex gap-2.5">
+            <button type="button" className={ui.btnGhost} onClick={() => setQuantities({})}>
+              Clear
+            </button>
+            <button type="button" className={ui.btnPrimary} onClick={() => setCheckingOut(true)}>
+              Continue to order
+            </button>
+          </div>
+        </div>
+      )}
+
+      {buyer && checkingOut && (
+        <CheckoutDialog profile={profile} buyer={buyer} items={items} onClose={() => setCheckingOut(false)} />
+      )}
+    </div>
+  )
+}
+
+/** − [0] +: the first + jumps to the minimum order; quantities follow the multiple; going under the minimum clears it. */
+function QuantityStepper({
+  value,
+  min,
+  step,
+  label,
+  onChange,
+}: {
+  value: number
+  min: number
+  step: number
+  label: string
+  onChange: (value: number) => void
+}) {
+  const start = Math.max(min, step)
+  const up = () => onChange(value === 0 ? start : value + step)
+  const down = () => onChange(value - step < min ? 0 : value - step)
+  const button = 'grid size-8 cursor-pointer place-items-center rounded-md border border-line bg-surface text-[1.1rem] font-bold text-heading hover:enabled:border-accent disabled:cursor-not-allowed disabled:opacity-40'
+
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <button type="button" className={button} onClick={down} disabled={value === 0} aria-label={`One step less of ${label}`}>
+        −
+      </button>
+      <input
+        type="number"
+        min={0}
+        step={step}
+        inputMode="numeric"
+        className={cx(ui.inputAuto, 'w-16 px-2 py-1.5 text-center tabular-nums', value > 0 && 'border-accent font-bold text-heading')}
+        value={value}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+        aria-label={`Quantity of ${label}`}
+      />
+      <button type="button" className={button} onClick={up} aria-label={`One step more of ${label}`}>
+        +
+      </button>
+    </div>
+  )
+}
+
+/** The second step: how to receive it and pay, the prices worked out by the seller's rules, then place it. */
+function CheckoutDialog({
+  profile,
+  buyer,
+  items,
+  onClose,
+}: {
+  profile: PublicProfile
+  buyer: Business
+  items: OrderIn['items']
+  onClose: () => void
+}) {
   const navigate = useNavigate()
   const seller = profile.business
   const money = (n: number | null) => formatMoney(n, seller.currency)
-  const { data: buyerLocations = [] } = useLoad(() => (buyer ? locationsApi.list(buyer.id) : Promise.resolve([])), [buyer?.id])
+  const { data: buyerLocations = [] } = useLoad(() => locationsApi.list(buyer.id), [buyer.id])
 
-  const [quantities, setQuantities] = useState<Record<string, string>>({})
   const availableMethods = FULFILLMENT_METHODS.filter(
     (m) =>
       (m.value === 'PICKUP' && profile.delivery.pickupAvailable) ||
@@ -88,18 +249,12 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
   const [notes, setNotes] = useState('')
   const [quote, setQuote] = useState<{ key: string; result: Quote } | null>(null)
   const [error, setError] = useState('')
-  const [active, setActive] = useState('') // the action that is running: its button spins
-  const busy = active !== ''
+  const [placing, setPlacing] = useState(false)
 
-  // Pre-fill the address with the buyer's primary location until the user types their own
+  // Pre-fill the address with the buyer's primary location until they type their own
   const primary = buyerLocations.find((l) => l.isPrimary) ?? buyerLocations[0]
-  const shownAddress: Address = address ?? (primary && buyer ? addressFromLocation(primary, buyer) : EMPTY_ADDRESS)
+  const shownAddress: Address = address ?? (primary ? addressFromLocation(primary, buyer) : EMPTY_ADDRESS)
   const setAddressField = (key: keyof Address, value: string) => setAddress({ ...shownAddress, [key]: value })
-
-  const rows = orderRows(products)
-  const items = rows
-    .map((row) => ({ productId: row.product.id, variantId: row.variantId, quantity: Number(quantities[row.key] || 0) }))
-    .filter((item) => item.quantity > 0)
 
   const body: OrderIn = {
     sellerBusinessId: seller.id,
@@ -113,211 +268,195 @@ export default function OrderPanel({ profile, products, buyer }: Props) {
   const bodyKey = JSON.stringify(body)
   const currentQuote = quote?.key === bodyKey ? quote.result : null
 
-  async function run(action: () => Promise<void>, name: string) {
+  // The summary is worked out again by the seller's rules a moment after anything in the order changes
+  useEffect(() => {
+    let stale = false
+    const timer = window.setTimeout(() => {
+      quoteOrder(buyer.id, body).then(
+        (result) => {
+          if (stale) return
+          setQuote({ key: bodyKey, result })
+          setError('')
+        },
+        (err: Error) => !stale && setError(err.message),
+      )
+    }, 400)
+    return () => {
+      stale = true
+      window.clearTimeout(timer)
+    }
+    // bodyKey is the whole order as text: body changes exactly when it does
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bodyKey, buyer.id])
+  // While it is being worked out again, the last summary stays (dimmed)
+  const shownQuote = currentQuote ?? quote?.result ?? null
+
+  async function place() {
     setError('')
-    setActive(name)
+    setPlacing(true)
     try {
-      await action()
+      const checked = await quoteOrder(buyer.id, body) // the final check, with everything as it is now
+      if (checked.problems.length) {
+        setQuote({ key: bodyKey, result: checked })
+        return
+      }
+      const order = await placeOrder(buyer.id, body)
+      navigate(`/business/${buyer.id}/orders/${order.id}`)
     } catch (err) {
       setError((err as Error).message)
     } finally {
-      setActive('')
+      setPlacing(false)
     }
   }
 
-  const checkPrices = (buyerId: string) => run(async () => setQuote({ key: bodyKey, result: await quoteOrder(buyerId, body) }), 'check')
-  const submit = (buyerId: string) =>
-    run(async () => {
-      const order = await placeOrder(buyerId, body)
-      navigate(`/business/${buyerId}/orders/${order.id}`)
-    }, 'place')
-
-  if (rows.length === 0) return <p className={ui.hint}>This business has no public products yet.</p>
-
   return (
-    <div className="flex flex-col gap-4.5">
-      <div className={ui.tableWrap}>
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th className={ui.th}>Product</th>
-              <th className={ui.th}>Prices</th>
-              <th className={ui.th}>Order rules</th>
-              {buyer && <th className={cx(ui.th, ui.num)}>Quantity</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const rules = row.product.orderRules
-              const myPrice = row.product.customerPrices.find((cp) => cp.variantId === null || cp.variantId === row.variantId)
-              return (
-                <tr key={row.key}>
-                  <td className={cx(ui.td, ui.strong)}>
-                    <span className={ui.rowLink}>
-                      <ProductThumb images={row.product.images} size="md" />
-                      <span>
-                        {row.name}
-                        {row.product.description && <span className="block text-[0.82rem] whitespace-normal text-muted">{row.product.description}</span>}
-                      </span>
-                    </span>
-                  </td>
-                  <td className={cx(ui.td, ui.small)}>
-                    {myPrice && (
-                      <div className="font-bold text-info">
-                        Your price: {money(myPrice.price)} (from {myPrice.minimumQuantity})
-                      </div>
-                    )}
-                    {tiersFor(row).map((tier) => (
-                      <div key={tier.id}>
-                        {tier.minimumQuantity}
-                        {tier.maximumQuantity ? `–${tier.maximumQuantity}` : '+'} {row.unit}: <strong>{money(tier.price)}</strong>
-                        {tier.customerType && <span className="text-muted"> ({labelOf(tier.customerType)} only)</span>}
-                      </div>
-                    ))}
-                    {!myPrice && tiersFor(row).length === 0 && <span className="text-muted">Ask for price</span>}
-                  </td>
-                  <td className={cx(ui.td, ui.small)}>
-                    MOQ {rules.minimumOrderQuantity}
-                    {rules.orderMultiple > 1 && ` · multiples of ${rules.orderMultiple}`}
-                    {rules.leadTimeDays !== null && ` · ${rules.leadTimeDays} day lead time`}
-                  </td>
-                  {buyer && (
-                  <td className={cx(ui.td, ui.num)}>
-                    <input
-                      type="number"
-                      min={0}
-                      step={rules.orderMultiple}
-                      className={cx(ui.inputAuto, 'w-24 text-right')}
-                      value={quantities[row.key] ?? ''}
-                      onChange={(e) => setQuantities((q) => ({ ...q, [row.key]: e.target.value }))}
-                      aria-label={`Quantity of ${row.name}`}
-                    />
-                  </td>
-                  )}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+    <Modal title={`Order from ${seller.businessName}`} onClose={placing ? () => {} : onClose} size="md" closeOnBackdrop={false}>
+      <div className="@container flex max-h-[calc(100dvh-2rem)] flex-col sm:max-h-[calc(100dvh-4rem)]">
+        <header className="border-b border-line px-6 py-4 max-sm:px-4">
+          <h2 className={ui.h2}>Order from {seller.businessName}</h2>
+          <p className={ui.hint}>
+            As {buyer.businessName}. {seller.businessName} gets these details and accepts or declines the order; you are notified either way.
+          </p>
+        </header>
 
-      {buyer && items.length > 0 && (
-        <section className={ui.formCard}>
-          <h2 className={ui.h2}>Checkout as {buyer.businessName}</h2>
-          <div className={ui.formGrid3}>
-            <label className={ui.label}>
-              Receive by
-              <select className={ui.input} value={method} onChange={(e) => setMethod(e.target.value)}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 max-sm:px-4">
+          <FormSection title="Delivery">
+            <div className="flex flex-col gap-3.5">
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Receive by">
+                {availableMethods.length === 0 && <span className={ui.hint}>The seller has not set how orders are received. Mention it in the notes.</span>}
                 {availableMethods.map((m) => (
-                  <option key={m.value} value={m.value}>
+                  <button
+                    key={m.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={method === m.value}
+                    onClick={() => setMethod(m.value)}
+                    className={cx(
+                      'cursor-pointer rounded-full border px-4 py-2 text-[0.9rem] font-semibold',
+                      method === m.value ? 'border-accent bg-info-soft text-accent' : 'border-line bg-surface text-heading hover:border-muted',
+                    )}
+                  >
                     {m.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={ui.label}>
-              Payment method
-              <select className={ui.input} value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
-                <option value="">Discuss with seller</option>
-                {profile.paymentTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {labelOf(t)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={ui.label}>
-              Payment terms
-              <select className={ui.input} value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)}>
-                <option value="">Discuss with seller</option>
-                {profile.paymentTerms.paymentTerms.map((t) => (
-                  <option key={t} value={t}>
-                    {labelOf(t)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {method !== 'PICKUP' && (
-            <FormSection title="Delivery address">
-              <div className={ui.formGrid3}>
-                {(
-                  [
-                    ['recipientName', 'Recipient'],
-                    ['phone', 'Phone'],
-                    ['addressLine1', 'Street address'],
-                    ['barangay', 'Barangay'],
-                    ['city', 'City *'],
-                    ['province', 'Province'],
-                    ['region', 'Region'],
-                    ['postalCode', 'Postal code'],
-                  ] as [keyof Address, string][]
-                ).map(([key, label]) => (
-                  <label key={key}>
-                    {label}
-                    <input className={ui.input} value={shownAddress[key]} onChange={(e) => setAddressField(key, e.target.value)} />
-                  </label>
+                  </button>
                 ))}
               </div>
-            </FormSection>
-          )}
+              {method === 'PICKUP' ? (
+                <p className={cx(ui.hint, 'm-0')}>You collect the order at the seller's location.</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 @lg:grid-cols-2">
+                  {(
+                    [
+                      ['recipientName', 'Recipient'],
+                      ['phone', 'Phone'],
+                      ['addressLine1', 'Street address'],
+                      ['barangay', 'Barangay'],
+                      ['city', 'City *'],
+                      ['province', 'Province'],
+                      ['region', 'Region'],
+                      ['postalCode', 'Postal code'],
+                    ] as [keyof Address, string][]
+                  ).map(([key, label]) => (
+                    <label key={key} className={ui.label}>
+                      {label}
+                      <input className={ui.input} value={shownAddress[key]} onChange={(e) => setAddressField(key, e.target.value)} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection title="Payment">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3 @lg:grid-cols-2">
+              <label className={ui.label}>
+                Payment method
+                <select className={ui.input} value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
+                  <option value="">Discuss with the seller</option>
+                  {profile.paymentTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {labelOf(t)}
+                      {profile.acceptedPayments?.find((a) => a.paymentType === t)?.providers.length
+                        ? ` (${profile.acceptedPayments.find((a) => a.paymentType === t)!.providers.join(', ')})`
+                        : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={ui.label}>
+                Payment terms
+                <select className={ui.input} value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)}>
+                  <option value="">Discuss with the seller</option>
+                  {profile.paymentTerms.paymentTerms.map((t) => (
+                    <option key={t} value={t}>
+                      {labelOf(t)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className={cx(ui.hint, 'mt-2 mb-0')}>The seller's account details are shown on the order once they accept it.</p>
+          </FormSection>
 
           <label className={ui.label}>
             Notes for the seller
-            <textarea className={ui.input} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea className={ui.input} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Deliver before 10 AM" />
           </label>
 
-          {currentQuote && (
-            <div className="flex flex-col gap-1.5 rounded-lg bg-page px-4 py-3.5">
-              {currentQuote.lines.map((line, i) => (
-                <div key={i} className={QUOTE_LINE}>
-                  <span>
-                    {line.productName}
-                    {line.variantName && ` (${line.variantName})`} × {line.quantity}
-                  </span>
-                  <span>{line.unitPrice === null ? '—' : `${money(line.unitPrice)} each`}</span>
-                  <strong>{money(line.subtotal)}</strong>
+          <FormSection title="Summary">
+            {!shownQuote ? (
+              <p className={cx(ui.hint, 'm-0')}>Working out the prices…</p>
+            ) : (
+              <div className={cx('flex flex-col gap-1.5 rounded-lg bg-page px-4 py-3.5 transition-opacity', !currentQuote && 'opacity-60')}>
+                {shownQuote.lines.map((line, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-3 text-[0.9rem]">
+                    <span>
+                      {line.productName}
+                      {line.variantName && ` (${line.variantName})`}
+                    </span>
+                    <span className="text-muted tabular-nums">
+                      {line.quantity} × {line.unitPrice === null ? '—' : money(line.unitPrice)}
+                    </span>
+                    <strong className="w-28 text-right text-heading tabular-nums">{money(line.subtotal)}</strong>
+                  </div>
+                ))}
+                <div className="grid grid-cols-[1fr_auto] gap-3 text-[0.9rem]">
+                  <span>Delivery fee</span>
+                  <strong className="w-28 text-right text-heading tabular-nums">{money(shownQuote.deliveryFee)}</strong>
                 </div>
-              ))}
-              <div className={QUOTE_LINE}>
-                <span>Delivery fee</span>
-                <span />
-                <strong>{money(currentQuote.deliveryFee)}</strong>
+                <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-line pt-2 text-base">
+                  <span className="font-semibold text-heading">Total</span>
+                  <strong className="w-28 text-right text-heading tabular-nums">{money(shownQuote.total)}</strong>
+                </div>
+                {shownQuote.problems.length > 0 && (
+                  <ul className={cx(ui.alertWarn, 'mt-2 list-disc pl-7')}>
+                    {shownQuote.problems.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              <div className={cx(QUOTE_LINE, 'border-t border-line pt-2 text-base')}>
-                <span>Total</span>
-                <span />
-                <strong>{money(currentQuote.total)}</strong>
-              </div>
-              {currentQuote.problems.length > 0 && (
-                <ul className={cx(ui.alertWarn, 'mt-2 list-disc pl-7')}>
-                  {currentQuote.problems.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+            )}
+          </FormSection>
+        </div>
 
+        <footer className="flex flex-col gap-2.5 rounded-b-xl border-t border-line bg-surface px-6 py-3.5 max-sm:px-4">
           <ErrorBox message={error} />
-          <div className={ui.formActions}>
-            <BusyButton className={ui.btnGhost} busy={active === 'check'} busyLabel="Checking…" disabled={busy} onClick={() => checkPrices(buyer.id)}>
-              {currentQuote ? 'Check again' : 'Check prices'}
-            </BusyButton>
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <button type="button" className={ui.btnGhost} onClick={onClose} disabled={placing}>
+              Back
+            </button>
             <BusyButton
-              busy={active === 'place'}
-              busyLabel="Placing order…"
               className={ui.btnPrimary}
-              disabled={busy || !currentQuote || currentQuote.problems.length > 0}
-              onClick={() => submit(buyer.id)}
-              title={!currentQuote ? 'Check prices first' : undefined}
+              busy={placing}
+              busyLabel="Placing order…"
+              disabled={!currentQuote || currentQuote.problems.length > 0}
+              onClick={place}
             >
-              Place order
+              Place order{shownQuote ? ` · ${money(shownQuote.total)}` : ''}
             </BusyButton>
           </div>
-        </section>
-      )}
-    </div>
+        </footer>
+      </div>
+    </Modal>
   )
 }

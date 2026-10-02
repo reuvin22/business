@@ -1,7 +1,9 @@
 import { Link, Outlet, useParams } from 'react-router-dom'
 import { getBusinessContext } from '../api/businesses'
+import { listOrders } from '../api/orders'
 import type { BusinessContext } from '../businessContext'
 import { labelOf } from '../constants/options'
+import { useOnActivity } from '../hooks/useActivity'
 import { useLoad } from '../hooks/useLoad'
 import NotificationBell from './NotificationBell'
 import SidebarLayout from './SidebarLayout'
@@ -71,7 +73,13 @@ export default function BusinessLayout() {
         { to: `${base}/activity`, label: 'Activity', icon: <ActivityIcon />, group: 'Overview' },
         { to: `${base}/products`, label: 'Products', icon: <ProductsIcon />, group: 'Selling' },
         { to: `${base}/inventory`, label: 'Inventory', icon: <InventoryIcon />, group: 'Selling' },
-        { to: `${base}/orders`, label: 'Orders', icon: <OrdersIcon />, group: 'Selling' },
+        {
+          to: `${base}/orders`,
+          label: 'Orders',
+          icon: <OrdersIcon />,
+          group: 'Selling',
+          badge: <PendingOrdersBadge businessId={business.id} />,
+        },
         { to: `${base}/messages`, label: 'Messages', icon: <MessagesIcon />, group: 'Connect' },
         { to: `${base}/network`, label: 'Network', icon: <NetworkIcon />, group: 'Connect' },
         { to: `${base}/profile`, label: 'Profile', icon: <ProfileIcon />, group: 'Business' },
@@ -83,3 +91,21 @@ export default function BusinessLayout() {
     </SidebarLayout>
   )
 }
+
+/** "!" while orders from other businesses wait for this business to accept or decline them. Updates live. */
+function PendingOrdersBadge({ businessId }: { businessId: string }) {
+  const orders = useLoad(() => listOrders(businessId, 'selling'), [businessId])
+  useOnActivity(businessId, ['ORDERS'], () => orders.reload())
+  const waiting = (orders.data ?? []).filter((o) => o.orderStatus === 'PENDING').length
+  if (!waiting) return null
+  return (
+    <span
+      className="grid size-5 place-items-center rounded-full bg-danger text-[0.75rem] font-extrabold text-white"
+      title={`${waiting} order${waiting === 1 ? '' : 's'} waiting for you`}
+      aria-label={`${waiting} pending order${waiting === 1 ? '' : 's'}`}
+    >
+      !
+    </span>
+  )
+}
+

@@ -200,7 +200,7 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
 
       {canHandle && status === 'PENDING' && (
         <>
-          <p className={ui.hint}>Check the charges, then confirm. Confirming reserves the stock at the location you choose.</p>
+          <p className={ui.hint}>Check the charges, then accept. Accepting takes the ordered quantities out of the stock at the location you choose, and tells the buyer.</p>
           <div className={ui.formGrid3}>
             {(Object.keys(CHARGE_LABELS) as (keyof typeof CHARGE_LABELS)[]).map((key) => (
               <label key={key}>
@@ -233,7 +233,7 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
               </select>
             </label>
             <BusyButton busy={active === 'CONFIRMED'} className={ui.btnPrimary} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
-              Confirm order
+              Accept order
             </BusyButton>
           </div>
           <div className={ui.actionRow}>

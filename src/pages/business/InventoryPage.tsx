@@ -29,7 +29,7 @@ export default function InventoryPage() {
 
   return (
     <div className={ui.page}>
-      <PageHeader title="Inventory" subtitle="Stock per product and location. Orders reserve stock when confirmed and take it out when shipped." />
+      <PageHeader title="Inventory" subtitle="Stock per product and location. Accepting an order takes its quantities out right away; cancelling it puts them back." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <ErrorBox message={stockData.error} />
       {!stockData.data ? (
@@ -74,7 +74,7 @@ function StockTab({ data }: { data: StockData }) {
     <section className={ui.section}>
       <div className={ui.sectionHead}>
         <p className={ui.hint}>
-          Available = on hand − reserved for confirmed orders.{' '}
+          Available = on hand − reserved (orders accepted before stock was taken on accept).{' '}
           {inventory.live && <LiveBadge />}
         </p>
         {canEdit && !adding && (

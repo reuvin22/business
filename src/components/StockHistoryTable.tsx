@@ -47,7 +47,7 @@ export default function StockHistoryTable({
             {formatNumber(Math.abs(m.change))}
           </Td>
           <Td num>{formatNumber(m.quantityAfter)}</Td>
-          <Td wrap>{[m.referenceLabel && `${m.movementType === 'ORDER_SHIPPED' ? 'Order' : 'Receipt'} ${m.referenceLabel}`, m.note].filter(Boolean).join(' · ') || '—'}</Td>
+          <Td wrap>{[m.referenceLabel && `${m.movementType.startsWith('ORDER_') ? 'Order' : 'Receipt'} ${m.referenceLabel}`, m.note].filter(Boolean).join(' · ') || '—'}</Td>
           <Td>{m.byName || '—'}</Td>
         </tr>
       ))}
