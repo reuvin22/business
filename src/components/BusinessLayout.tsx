@@ -54,7 +54,7 @@ export default function BusinessLayout() {
     <SidebarLayout
       title={business.businessName}
       header={
-        <div className="flex flex-col items-start gap-2.5 px-3 pb-5">
+        <div className="flex flex-col items-start gap-2.5 px-3 pb-5 short:gap-1.5 short:pb-3">
           <Link to="/dashboard/business" className="text-[0.88rem] font-semibold text-side-text no-underline hover:text-lime">
             ← All businesses
           </Link>

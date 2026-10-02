@@ -4,6 +4,9 @@
    which become classes like bg-surface, text-heading, border-line. */
 @import 'tailwindcss';
 
+/* short:... applies on screens that are not very tall (laptops, phones turned sideways), e.g. the sidebar gets tighter */
+@custom-variant short (@media (max-height: 820px));
+
 @theme {
   --font-sans: 'Manrope', system-ui, 'Segoe UI', Roboto, sans-serif;
 

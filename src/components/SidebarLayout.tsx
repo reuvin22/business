@@ -17,8 +17,9 @@ type Props = {
   children: ReactNode
 }
 
+// Tighter on screens that are not very tall (short:), so the whole menu fits without scrolling
 const navItemClass =
-  'flex w-full cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-3.5 py-2.5 text-left text-[0.92rem] font-medium text-side-text no-underline hover:bg-side-hover hover:text-side-heading'
+  'flex w-full cursor-pointer items-center gap-3 rounded-md border-0 bg-transparent px-3.5 py-2.5 text-left text-[0.92rem] font-medium whitespace-nowrap text-side-text no-underline hover:bg-side-hover hover:text-side-heading short:py-1.5 [&>svg]:shrink-0'
 
 export default function SidebarLayout({ title, header, items, children }: Props) {
   const { user } = useAuth()
@@ -46,7 +47,8 @@ export default function SidebarLayout({ title, header, items, children }: Props)
 
       <aside
         className={cx(
-          'sticky top-0 flex h-screen w-59 shrink-0 flex-col gap-1.5 bg-side px-3.5 pt-6.5 pb-5 text-side-text',
+          // The whole sidebar scrolls (only on very short screens), with no scrollbar showing; it is dark in both themes
+          'sticky top-0 flex h-dvh w-59 shrink-0 flex-col gap-1.5 overflow-y-auto bg-side px-3.5 pt-6.5 pb-5 text-side-text [color-scheme:dark] [scrollbar-width:none] short:pt-4 short:pb-3 [&::-webkit-scrollbar]:hidden',
           'max-md:fixed max-md:left-0 max-md:z-30 max-md:transition-transform',
           open ? 'max-md:shadow-2xl' : 'max-md:-translate-x-full',
         )}
@@ -58,11 +60,13 @@ export default function SidebarLayout({ title, header, items, children }: Props)
           </div>
         )}
 
-        <nav className="flex flex-col gap-1 overflow-y-auto">
+        <nav className="flex flex-col gap-0.5">
           {items.map((item, i) => (
             <Fragment key={item.to}>
               {item.group && item.group !== items[i - 1]?.group && (
-                <span className="mt-3 px-3.5 pb-0.5 text-[0.7rem] font-bold tracking-wider text-side-text/70 uppercase first:mt-0">{item.group}</span>
+                <span className="mt-3 px-3.5 pb-0.5 text-[0.7rem] font-bold tracking-wider text-side-text/70 uppercase first:mt-0 short:mt-2">
+                  {item.group}
+                </span>
               )}
               <NavLink
                 to={item.to}
@@ -71,13 +75,13 @@ export default function SidebarLayout({ title, header, items, children }: Props)
                 className={({ isActive }) => cx(navItemClass, isActive && 'bg-side-active font-semibold text-lime hover:text-lime')}
               >
                 {item.icon}
-                {item.label}
+                <span className="truncate">{item.label}</span>
               </NavLink>
             </Fragment>
           ))}
         </nav>
 
-        <div className="mt-auto flex flex-col gap-3.5">
+        <div className="mt-auto flex flex-col gap-3.5 pt-3 short:gap-2 short:pt-2">
           <ThemeSwitch showLabels />
           <button type="button" className={cx(navItemClass, 'hover:text-white')} onClick={handleLogout}>
             <LogoutIcon />
