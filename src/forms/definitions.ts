@@ -37,14 +37,18 @@ export const businessSections = (categoryOptions: Option[]): Section[] => [
     ],
   },
   {
-    title: 'Contact & branding',
+    title: 'Contact',
     fields: [
       { key: 'primaryEmail', label: 'Business email', type: 'email', placeholder: 'hello@business.com' },
       { key: 'primaryPhone', label: 'Phone', type: 'tel', placeholder: '+63 912 345 6789' },
       { key: 'website', label: 'Website', type: 'url', placeholder: 'https://' },
-      { key: 'businessLogo', label: 'Logo', type: 'image' },
-      { key: 'coverImage', label: 'Cover image', type: 'image' },
     ],
+  },
+  {
+    // Only in the edit form: the logo is shown on the business's cards (directory, My businesses), not as text here
+    title: 'Logo',
+    hint: 'Shown as the big picture on your card in the directory and in My businesses. A square image looks best.',
+    fields: [{ key: 'businessLogo', label: 'Logo', type: 'image' }],
   },
 ]
 

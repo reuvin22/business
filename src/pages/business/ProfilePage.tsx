@@ -158,7 +158,6 @@ function IdentityTab() {
     <>
       <div className={ui.sectionHead}>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {business.coverImage && <img src={business.coverImage} alt="" className="max-h-45 w-full rounded-[10px] object-cover" />}
           <p className={ui.hint}>
             Status <Badge value={business.businessStatus} /> · Verification <Badge value={business.verificationStatus} />
           </p>
@@ -169,7 +168,8 @@ function IdentityTab() {
           </button>
         )}
       </div>
-      <DetailsView sections={sections} values={business} />
+      {/* The logo is a picture on the business's cards, not a link to read here */}
+      <DetailsView sections={sections.filter((s) => !s.fields.every((field) => field.type === 'image'))} values={business} />
 
       {role.role === 'OWNER' && (
         <section className={ui.dangerZone}>

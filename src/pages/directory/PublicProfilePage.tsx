@@ -44,7 +44,6 @@ export default function PublicProfilePage() {
       {backLink}
 
       <header className={cx(ui.card, 'overflow-hidden p-0 max-sm:p-0')}>
-        {business.coverImage && <img src={business.coverImage} alt="" className="block h-47.5 w-full object-cover" />}
         <div className="flex flex-wrap items-start gap-4.5 px-6 py-5.5">
           <BusinessLogo name={business.businessName} src={business.businessLogo} />
           <div className="flex min-w-60 flex-1 flex-col gap-1.5">
