@@ -10,6 +10,8 @@ const SPECIAL_LABELS: Record<string, string> = {
   ID: 'ID',
   COD: 'Cash on delivery (COD)',
   GCASH: 'GCash',
+  E_WALLET: 'E-wallet',
+  ONLINE_PAYMENT: 'Online payment link',
   X: 'X (Twitter)',
   TIKTOK: 'TikTok',
   LINKEDIN: 'LinkedIn',
@@ -172,14 +174,14 @@ export const UNITS = ['pcs', 'box', 'case', 'pack', 'set', 'bottle', 'can', 'sac
 // ---- Logistics & payments ----
 export const DELIVERY_METHODS = options('OWN_DELIVERY', 'COURIER', 'FREIGHT', 'OTHER')
 export const FULFILLMENT_METHODS = options('DELIVERY', 'PICKUP', 'SHIPPING')
+// The kind of payment; which bank / e-wallet / cards is the method's provider. (Older methods named
+// the provider here: GCASH, MAYA, CREDIT_CARD, DEBIT_CARD. They still have labels, for old orders.)
 export const PAYMENT_TYPES = options(
   'CASH',
   'COD',
   'BANK_TRANSFER',
-  'GCASH',
-  'MAYA',
-  'CREDIT_CARD',
-  'DEBIT_CARD',
+  'E_WALLET',
+  'CARD',
   'ONLINE_PAYMENT',
   'CHEQUE',
   'CREDIT_TERMS',

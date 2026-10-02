@@ -86,9 +86,10 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         <DetailItem label="Accepts" wide>
           {profile.paymentTypes.length > 0 ? (
             <span className="mt-1 flex flex-wrap gap-1.5">
-              {profile.paymentTypes.map((type) => (
-                <span key={type} className={ui.chip}>
-                  {labelOf(type)}
+              {(profile.acceptedPayments ?? profile.paymentTypes.map((paymentType) => ({ paymentType, providers: [] }))).map((accepted) => (
+                <span key={accepted.paymentType} className={ui.chip}>
+                  {labelOf(accepted.paymentType)}
+                  {accepted.providers.length > 0 && <span className="font-normal"> · {accepted.providers.join(', ')}</span>}
                 </span>
               ))}
             </span>

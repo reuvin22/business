@@ -5,6 +5,7 @@ import ResourceSection from '../../components/ResourceSection'
 import { Badge } from '../../components/ui'
 import { labelOf } from '../../constants/options'
 import * as forms from '../../forms/definitions'
+import PaymentMethodForm from './PaymentMethodForm'
 
 /** The ways this business accepts payment (shown on Business profile and on Delivery & payments: the same list). */
 export default function PaymentMethodsSection() {
@@ -17,12 +18,13 @@ export default function PaymentMethodsSection() {
       resource={paymentMethodsApi}
       sections={forms.paymentMethodSections}
       newValues={forms.newPaymentMethodValues}
+      renderForm={(method, save, close) => <PaymentMethodForm key={method?.id ?? 'new'} method={method} save={save} close={close} />}
       canEdit={can('payments.manage')}
       addLabel="+ Add payment method"
       emptyText="No payment methods yet. Add the ways you accept payment, e.g. Cash, GCash, or Bank transfer."
       columns={[
         { label: 'Type', render: (m) => <strong>{labelOf(m.paymentType)}</strong> },
-        { label: 'Provider', render: (m) => m.provider || '—' },
+        { label: 'Bank / e-wallet / cards', render: (m) => m.provider || '—' },
         { label: 'Account', render: (m) => [m.accountName, m.accountNumber].filter(Boolean).join(' · ') || '—' },
         { label: 'Status', render: (m) => <Badge value={m.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
       ]}

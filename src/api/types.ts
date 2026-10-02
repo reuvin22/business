@@ -556,6 +556,8 @@ export type PublicProfile = {
   paymentTerms: PaymentTerms
   returnPolicy: ReturnPolicy
   paymentTypes: string[]
+  /** The types with their banks / e-wallets / cards (never the account details) */
+  acceptedPayments?: { paymentType: string; providers: string[] }[]
   certifications: PublicCertification[]
   socialLinks: SocialLink[]
 }
