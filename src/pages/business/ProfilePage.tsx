@@ -140,6 +140,7 @@ function IdentityTab() {
         sections={sections}
         initial={business}
         submitLabel="Save changes"
+        businessId={business.id}
         onCancel={() => setEditing(false)}
         onSubmit={async (values) => {
           await updateBusiness(business.id, { ...business, ...values } as BusinessIn)

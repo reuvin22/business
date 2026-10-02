@@ -1,7 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { uploadImage } from '../api/uploads'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import { cx, ui } from '../styles'
-import { BusyButton, ErrorBox, Modal } from './ui'
+import { shrinkImage } from '../utils/image'
+import { BusyButton, ErrorBox, Modal, Spinner } from './ui'
 
 type Props = {
   title?: string
@@ -16,9 +18,11 @@ type Props = {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   /** Extra editors shown after the sections (e.g. opening hours). */
   children?: ReactNode
+  /** Given = image fields get an upload button (images are stored under this business). */
+  businessId?: string
 }
 
-export default function FieldForm({ title, sections, initial, submitLabel, onSubmit, onCancel, size = 'lg', children }: Props) {
+export default function FieldForm({ title, sections, initial, submitLabel, onSubmit, onCancel, size = 'lg', children, businessId }: Props) {
   const [state, setState] = useState<FormState>(() => toFormState(sections, initial))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -55,6 +59,7 @@ export default function FieldForm({ title, sections, initial, submitLabel, onSub
                 value={state[field.key]}
                 onChange={(value) => set(field.key, value)}
                 autoFocus={sectionIndex === 0 && i === 0}
+                businessId={businessId}
               />
             ))}
           </div>
@@ -104,11 +109,13 @@ function FieldInput({
   value,
   onChange,
   autoFocus,
+  businessId,
 }: {
   field: FieldDef
   value: FormState[string]
   onChange: (value: FormState[string]) => void
   autoFocus: boolean
+  businessId?: string
 }) {
   const label = `${field.label}${field.required ? ' *' : ''}`
   const hint = field.hint && <span className="block text-[0.78rem] font-normal text-muted">{field.hint}</span>
@@ -155,6 +162,10 @@ function FieldInput({
   }
 
   const text = typeof value === 'string' ? value : ''
+  if (field.type === 'image') {
+    return <ImageInput label={label} hint={hint} field={field} url={text} onChange={onChange} businessId={businessId} />
+  }
+
   let input: ReactNode
   if (field.type === 'textarea') {
     input = (
@@ -199,5 +210,79 @@ function FieldInput({
       {input}
       {hint}
     </label>
+  )
+}
+
+/** An image link with a preview, plus an upload button when we know which business it belongs to. */
+function ImageInput({
+  label,
+  hint,
+  field,
+  url,
+  onChange,
+  businessId,
+}: {
+  label: string
+  hint: ReactNode
+  field: FieldDef
+  url: string
+  onChange: (value: string) => void
+  businessId?: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleFile(file: File | undefined) {
+    if (!file || !businessId) return
+    setError('')
+    setUploading(true)
+    try {
+      const { blob, name } = await shrinkImage(file)
+      onChange(await uploadImage(businessId, blob, name, 'business'))
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="col-span-full flex flex-col gap-2">
+      <span className="text-[0.88rem] font-semibold text-heading">{label}</span>
+      {url && <img src={url} alt="" className="max-h-32 w-fit max-w-full rounded-lg bg-chip object-contain" />}
+      <div className="flex flex-wrap items-center gap-2">
+        {businessId && (
+          <label className={cx(ui.btnGhost, uploading && 'pointer-events-none opacity-60')} aria-busy={uploading}>
+            {uploading && <Spinner />}
+            {uploading ? 'Uploading…' : url ? 'Replace image' : '+ Upload image'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                handleFile(e.target.files?.[0])
+                e.target.value = '' // lets you pick the same file again
+              }}
+            />
+          </label>
+        )}
+        {url && (
+          <button type="button" className={ui.linkDanger} onClick={() => onChange('')}>
+            Remove
+          </button>
+        )}
+      </div>
+      <input
+        type="url"
+        className={ui.input}
+        value={url}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={businessId ? `…or paste an image link (${field.placeholder ?? 'https://…'})` : field.placeholder}
+        aria-label={`${field.label} link`}
+      />
+      {!businessId && <span className={ui.hint}>You can upload an image after the business is created.</span>}
+      {hint}
+      <ErrorBox message={error} />
+    </div>
   )
 }

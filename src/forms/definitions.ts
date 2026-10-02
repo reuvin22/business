@@ -42,8 +42,8 @@ export const businessSections = (categoryOptions: Option[]): Section[] => [
       { key: 'primaryEmail', label: 'Business email', type: 'email', placeholder: 'hello@business.com' },
       { key: 'primaryPhone', label: 'Phone', type: 'tel', placeholder: '+63 912 345 6789' },
       { key: 'website', label: 'Website', type: 'url', placeholder: 'https://' },
-      { key: 'businessLogo', label: 'Logo image link', type: 'url', placeholder: 'https://…/logo.png' },
-      { key: 'coverImage', label: 'Cover image link', type: 'url', placeholder: 'https://…/cover.jpg' },
+      { key: 'businessLogo', label: 'Logo', type: 'image', placeholder: 'https://…/logo.png' },
+      { key: 'coverImage', label: 'Cover image', type: 'image', placeholder: 'https://…/cover.jpg' },
     ],
   },
 ]
