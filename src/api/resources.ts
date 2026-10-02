@@ -14,6 +14,7 @@ import type {
   Location,
   PaymentMethod,
   PaymentTerms,
+  PosSettings,
   ReturnPolicy,
   SocialLink,
   SupplierProfile,
@@ -57,6 +58,8 @@ export const socialLinksApi = listResource<SocialLink>('social-links')
 export const certificationsApi = listResource<Certification>('certifications')
 export const documentsApi = listResource<BusinessDocument>('documents')
 export const legalApi = singleResource<Legal>('legal')
+/** The selling app's template (Team page) */
+export const posSettingsApi = singleResource<PosSettings>('pos-settings')
 
 export const listVerificationRequests = (businessId: string) =>
   get<VerificationRequest[]>(`/businesses/${businessId}/verifications`)

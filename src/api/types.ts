@@ -582,3 +582,23 @@ export type PublicProduct = Pick<
   | 'images'
   | 'orderRules'
 > & { variants: Variant[]; prices: Price[]; customerPrices: MyCustomerPrice[] }
+
+/** How the selling app looks for this kind of business (Team page). */
+export type PosTemplate = 'DEFAULT' | 'GROCERY' | 'RESTAURANT' | 'COFFEE_SHOP' | 'CUSTOM'
+export type PosOrderType = 'DINE_IN' | 'TAKE_OUT' | 'DELIVERY'
+/** A template the business makes itself: the switches the built-in templates are made of. */
+export type PosCustomTemplate = {
+  name: string
+  layout: 'tiles' | 'list'
+  photos: boolean
+  categoryTabs: boolean
+  variantButtons: boolean
+  stock: 'always' | 'low'
+  scanFirst: boolean
+  orderTypes: PosOrderType[]
+  tableNumber: boolean
+  customerName: boolean
+}
+/** custom is kept while a built-in template is in use, to switch back to later. */
+export type PosSettings = { template: PosTemplate; custom: PosCustomTemplate }
+

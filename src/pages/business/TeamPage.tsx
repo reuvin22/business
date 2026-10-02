@@ -10,6 +10,7 @@ import { useLoad } from '../../hooks/useLoad'
 import { useAuth } from '../../useAuth'
 import { formatDateTime } from '../../utils/format'
 import { cx, ui } from '../../styles'
+import PosTemplateSection from './team/PosTemplateSection'
 import SellersSection from './team/SellersSection'
 
 export default function TeamPage() {
@@ -124,6 +125,7 @@ export default function TeamPage() {
       {role.role === 'OWNER' && <p className={ui.hint}>You are the owner. Owners cannot leave the business; they can only delete it (Profile → Business info).</p>}
 
       <SellersSection />
+      <PosTemplateSection />
     </div>
   )
 }
