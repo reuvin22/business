@@ -10,7 +10,7 @@ import { BusyButton, ErrorBox, Modal } from './ui'
 
 /** What the API returns when a session starts: this browser's own one-time code, as a QR code and as text. */
 type Started = { session: { id: string; locationName: string }; pairingCode: string; qrText: string; pairingExpiresAt: number }
-type Live = { active: boolean; scannerName: string; pairedAt: number | null }
+type Live = { active: boolean; scannerName: string; pairedAt: number | null; approved?: boolean }
 
 const DEVICE_KEY = 'siris:device-id'
 const sessionKey = (businessId: string) => `siris:admin-scanner:${businessId}`
@@ -67,8 +67,15 @@ export default function PhoneScannerConnect({ businessId }: { businessId: string
     )
   }, [businessId, started])
 
-  const connected = !!live?.active && !!live.pairedAt
+  const connected = !!live?.active && !!live.pairedAt && !!live.approved
+  // A phone scanned the QR code and waits for an OK here (it can do nothing until then)
+  const waitingName = live?.active && live.pairedAt && !live.approved ? live.scannerName || 'A phone' : ''
   const ended = !!started && !!live && !live.active
+  const [askedFor, setAskedFor] = useState('')
+  if (waitingName && askedFor !== waitingName) {
+    setAskedFor(waitingName)
+    setOpen(true)
+  }
 
   function update(next: Started | null) {
     saveStarted(businessId, next)
@@ -84,13 +91,14 @@ export default function PhoneScannerConnect({ businessId }: { businessId: string
         onClick={() => setOpen(true)}
         title="Use a phone to register products by scanning their barcodes"
       >
-        {connected ? `📱 ${live?.scannerName || 'Phone'} connected` : '📱 Connect phone'}
+        {waitingName ? '📱 Approve phone?' : connected ? `📱 ${live?.scannerName || 'Phone'} connected` : '📱 Connect phone'}
       </button>
       {open && (
         <ConnectDialog
           businessId={businessId}
           started={ended ? null : started}
           connected={connected}
+          waitingName={waitingName}
           scannerName={live?.scannerName ?? ''}
           onChange={update}
           onClose={() => setOpen(false)}
@@ -104,6 +112,7 @@ function ConnectDialog({
   businessId,
   started,
   connected,
+  waitingName,
   scannerName,
   onChange,
   onClose,
@@ -111,6 +120,7 @@ function ConnectDialog({
   businessId: string
   started: Started | null
   connected: boolean
+  waitingName: string
   scannerName: string
   onChange: (started: Started | null) => void
   onClose: () => void
@@ -147,6 +157,11 @@ function ConnectDialog({
       onChange(next)
     })
 
+  const approve = () =>
+    run(async () => {
+      if (started) await post<void>(`/businesses/${businessId}/admin-scanner-sessions/${started.session.id}/approve?till_device_id=${deviceId()}`)
+    })
+
   const disconnect = () =>
     run(async () => {
       if (started) await del(`/businesses/${businessId}/admin-scanner-sessions/${started.session.id}?till_device_id=${deviceId()}`)
@@ -164,10 +179,27 @@ function ConnectDialog({
           </p>
         </div>
 
-        {connected ? (
+        {waitingName ? (
+          <div className="flex flex-col gap-2 rounded-lg border-2 border-warn bg-warn-soft px-4 py-3 text-heading">
+            <strong className="text-[1.05rem]">“{waitingName}” wants to connect</strong>
+            <span className="text-[0.9rem]">
+              Only allow it if it is your phone: it can add products in your name. If you do not know it, reject it.
+            </span>
+            <div className="flex gap-2">
+              <BusyButton className={ui.btnPrimary} busy={busy} disabled={busy} onClick={approve}>
+                Allow
+              </BusyButton>
+              <BusyButton className={ui.btnGhost} busy={busy} disabled={busy} onClick={disconnect}>
+                Reject
+              </BusyButton>
+            </div>
+          </div>
+        ) : connected ? (
           <div className="flex flex-col gap-1 rounded-lg bg-info-soft px-4 py-3 text-heading">
             <strong>Connected: {scannerName || 'Phone'}</strong>
-            <span className="text-[0.88rem]">Products it registers show up in your product list.</span>
+            <span className="text-[0.88rem]">
+              Products it registers show up in your product list. It disconnects after 30 minutes unused (2 hours at most).
+            </span>
           </div>
         ) : started ? (
           <div className="flex flex-col items-center gap-2 text-center">
@@ -202,7 +234,7 @@ function ConnectDialog({
               Disconnect
             </BusyButton>
           )}
-          {!connected && (
+          {!connected && !waitingName && (
             <BusyButton className={ui.btnPrimary} busy={busy} disabled={busy || !store} onClick={start}>
               {started ? 'New code' : 'Show QR code'}
             </BusyButton>
