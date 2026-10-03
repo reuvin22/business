@@ -27,3 +27,12 @@ export const changeOrderCharges = (
 
 export const reviewOrder = (buyerBusinessId: string, orderId: string, body: { ratings: Ratings; review: string }) =>
   post<Review>(`${orders(buyerBusinessId)}/${orderId}/review`, body)
+/** The buyer attaches proof of payment: files uploaded with uploadPrivateFile(..., 'proof') */
+export const addPaymentProof = (buyerBusinessId: string, orderId: string, files: string[]) =>
+  post<Order>(`${orders(buyerBusinessId)}/${orderId}/payment-proof`, { files })
+/** A link (for a few minutes) to one proof of payment; the buyer and the seller may open it */
+export const openPaymentProof = (businessId: string, orderId: string, ref: string) =>
+  get<{ url: string }>(`${orders(businessId)}/${orderId}/payment-proof?ref=${encodeURIComponent(ref)}`, { fresh: true }).then(
+    (result) => result.url,
+  )
+

@@ -20,6 +20,8 @@ import PaymentMethodsSection from './PaymentMethodsSection'
 import LocationsTab from './profile/LocationsTab'
 import VerificationTab from './profile/VerificationTab'
 import { ui } from '../../styles'
+import { openPrivateFile } from '../../api/uploads'
+import PrivateFileButton from '../../components/PrivateFile'
 
 // By category: what buyers see about you, how they pay, and what proves you are legitimate
 const TABS = [
@@ -114,9 +116,12 @@ export default function ProfilePage() {
             {
               label: 'File',
               render: (d) => (
-                <a href={d.fileUrl} target="_blank" rel="noreferrer">
-                  {d.fileName || 'Open file'}
-                </a>
+                <PrivateFileButton
+                  value={d.fileUrl}
+                  label={d.fileName || undefined}
+                  title={d.fileName || labelOf(d.documentType)}
+                  open={() => openPrivateFile(business.id, d.fileUrl)}
+                />
               ),
             },
             { label: 'Expires', render: (d) => formatDate(d.expiryDate) },

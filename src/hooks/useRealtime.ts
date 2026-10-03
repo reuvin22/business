@@ -1,7 +1,7 @@
 import { limitToLast, onValue, orderByChild, query, ref } from 'firebase/database'
 import { useEffect, useState } from 'react'
 import { rtdb } from '../firebase'
-import { decryptFields } from '../utils/crypto'
+import { decryptFields, type RoomKeys } from '../utils/crypto'
 
 // How many of the newest messages a chat shows (the same as the API)
 const MESSAGE_LIMIT = 200
@@ -10,13 +10,13 @@ type State<T> = { key: string | null; data: T | undefined; error: string }
 
 /**
  * The newest messages at a path in the Realtime Database, oldest first, updating live.
- * What was said is encrypted there: `roomKey` (from the API) decrypts it.
+ * What was said is encrypted there: `roomKeys` (from the API, one per key version) decrypt it.
  * Pass null to wait (e.g. until the API has granted access).
  */
-export function useRealtimeMessages<T extends { createdAt: number }>(path: string | null, roomKey: string | undefined) {
+export function useRealtimeMessages<T extends { createdAt: number }>(path: string | null, roomKeys: RoomKeys | undefined) {
   return useRealtime<(T & { id: string })[]>(path, (value) =>
     Promise.all(
-      Object.entries((value ?? {}) as Record<string, T>).map(([id, item]) => decryptFields({ ...item, id }, roomKey)),
+      Object.entries((value ?? {}) as Record<string, T>).map(([id, item]) => decryptFields({ ...item, id }, roomKeys)),
     ).then((items) => items.sort((a, b) => a.createdAt - b.createdAt)),
   )
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FirebaseError } from 'firebase/app'
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -13,6 +14,9 @@ import { BusyButton } from '../components/ui'
 import { cx, ui } from '../styles'
 
 type Mode = 'signin' | 'signup'
+
+// Longer passwords are much harder to guess (set the same minimum in Firebase: Authentication > Settings > Password policy)
+const MIN_PASSWORD = 10
 
 function friendlyError(err: unknown): string {
   if (!(err instanceof FirebaseError)) return 'Something went wrong. Please try again.'
@@ -64,6 +68,10 @@ export default function Login() {
       setError('Passwords do not match.')
       return
     }
+    if (mode === 'signup' && password.length < MIN_PASSWORD) {
+      setError(`Use at least ${MIN_PASSWORD} characters for your password.`)
+      return
+    }
 
     setBusy(true)
     try {
@@ -72,6 +80,8 @@ export default function Login() {
       } else {
         const cred = await createUserWithEmailAndPassword(auth, email, password)
         if (name.trim()) await updateProfile(cred.user, { displayName: name.trim() })
+        // Proves the address is theirs (see VerifyEmailBanner); they can use the app meanwhile
+        await sendEmailVerification(cred.user).catch(() => undefined)
       }
       goNext()
     } catch (err) {
@@ -179,8 +189,8 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              placeholder="••••••••"
-              minLength={6}
+              placeholder={mode === 'signup' ? `At least ${MIN_PASSWORD} characters` : '••••••••'}
+              minLength={mode === 'signup' ? MIN_PASSWORD : undefined}
               required
             />
           </label>

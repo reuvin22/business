@@ -84,7 +84,12 @@ export default function MessagesPage() {
           {!access.data ? (
             access.error ? <EmptyState text="Messages are not available right now." /> : <ChatSkeleton />
           ) : selected === 'team' || selected === 'market' ? (
-            <ChannelView key={selected} channel={selected} access={access.data} canPost={selected === 'team' || can('messages.send')} />
+            <ChannelView
+              key={selected}
+              channel={selected}
+              access={access.data}
+              canPost={selected === 'team' || (can('messages.send') && business.verificationStatus === 'VERIFIED')}
+            />
           ) : selected ? (
             <Thread key={selected} conversationId={selected} onChange={conversations.reload} canSend={can('messages.send')} />
           ) : toBusinessId ? (
@@ -150,7 +155,7 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
   const info = CHANNEL_INFO[channel]
   const messages = useRealtimeMessages<Omit<ChatMessage, 'id'>>(
     channel === 'team' ? access.teamPath : access.marketPath,
-    channel === 'team' ? access.teamKey : access.marketKey,
+    channel === 'team' ? access.teamKeys : access.marketKeys,
   )
 
   return (
@@ -212,7 +217,11 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
           }}
         />
       ) : (
-        <p className={cx(ui.hint, 'm-0 border-t border-line p-4')}>You don't have permission to post in the market.</p>
+        <p className={cx(ui.hint, 'm-0 border-t border-line p-4')}>
+          {business.verificationStatus !== 'VERIFIED'
+            ? 'Only verified businesses can post in the market (so look-alike businesses cannot reach everyone). Request verification in Profile.'
+            : "You don't have permission to post in the market."}
+        </p>
       )}
     </>
   )
@@ -226,7 +235,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
   // Opening it through the API sets the chat up for live reading and marks it as read
   const opened = useLoad(() => network.openConversation(business.id, conversationId), [business.id, conversationId])
   const path = opened.data ? `chat/dm/${conversationId}` : null
-  const live = useRealtimeMessages<Omit<LiveMessage, 'id'>>(path && `${path}/messages`, opened.data?.realtimeKey)
+  const live = useRealtimeMessages<Omit<LiveMessage, 'id'>>(path && `${path}/messages`, opened.data?.realtimeKeys)
   const lastReadAt = useRealtimeValue<Record<string, number>>(path && `${path}/meta/lastReadAt`)
 
   // Without live updates (e.g. the database rules are not deployed), show what the API returned

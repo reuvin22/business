@@ -78,7 +78,8 @@ export default function VerificationTab() {
                   <label key={d.id} className={ui.checkboxLabel}>
                     <input type="checkbox" className={ui.checkbox} checked={documentIds.includes(d.id)} onChange={() => toggleDocument(d.id)} />
                     <span>
-                      {labelOf(d.documentType)} — {d.fileName || d.fileUrl}
+                      {labelOf(d.documentType)}
+                      {d.fileName && ` — ${d.fileName}`}
                     </span>
                   </label>
                 ))

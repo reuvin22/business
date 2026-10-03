@@ -167,7 +167,7 @@ export const certificationSections: Section[] = [
       { key: 'certificateNumber', label: 'Certificate number' },
       { key: 'issueDate', label: 'Issue date', type: 'date' },
       { key: 'expiryDate', label: 'Expiry date', type: 'date' },
-      { key: 'documentUrl', label: 'Copy of certificate (link)', type: 'url', hint: 'Private: only your team and platform admins.' },
+      { key: 'documentUrl', label: 'Copy of certificate', type: 'privateFile', hint: 'Private: only your team and platform admins.' },
     ],
   },
 ]
@@ -175,11 +175,11 @@ export const certificationSections: Section[] = [
 export const documentSections: Section[] = [
   {
     title: 'Document',
-    hint: 'Upload the file to Google Drive, Dropbox, or similar and paste a share link. Documents are private.',
+    hint: 'Documents are private: only your team and platform admins can open them, and only inside SIRIS.',
     fields: [
       { key: 'documentType', label: 'Type', type: 'select', options: opt.DOCUMENT_TYPES, required: true },
       { key: 'fileName', label: 'File name', placeholder: 'e.g. Business permit 2026' },
-      { key: 'fileUrl', label: 'File link', type: 'url', required: true, placeholder: 'https://' },
+      { key: 'fileUrl', label: 'File', type: 'privateFile', required: true },
       { key: 'issueDate', label: 'Issue date', type: 'date' },
       { key: 'expiryDate', label: 'Expiry date', type: 'date' },
     ],

@@ -44,12 +44,19 @@ export async function decryptValue(value: unknown, key: string): Promise<unknown
 const SECRET_FIELDS = ['message', 'attachments', 'order', 'title', 'detail'] as const
 
 /**
+ * The keys of one room, by version: {"": first key, "1": after someone left, ...}. A room gets a new key
+ * when someone who could read it leaves the team; each message says which version sealed it ("kv").
+ */
+export type RoomKeys = Record<string, string>
+
+/**
  * A message (or activity) with what was said decrypted. Without the key, or if a value cannot be read,
  * it shows a placeholder instead of the encrypted text.
  */
-export async function decryptFields<T extends object>(item: T, key: string | undefined): Promise<T> {
+export async function decryptFields<T extends object>(item: T, keys: RoomKeys | undefined): Promise<T> {
   const record = item as Record<string, unknown>
   const opened: Record<string, unknown> = { ...record }
+  const key = keys?.[String(record.kv ?? '')]
   await Promise.all(
     SECRET_FIELDS.filter((field) => isEncrypted(record[field])).map(async (field) => {
       try {

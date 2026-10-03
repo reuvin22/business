@@ -53,7 +53,7 @@ export function useOnActivity(businessId: string | null | undefined, categories:
     let stop = () => {}
     let stopped = false
     Promise.all([serverNow(), ensureLiveAccess(businessId)]).then(
-      ([now, { liveKey }]) => {
+      ([now, { liveKeys }]) => {
         if (stopped) return
         // Only what happens from now on
         const fromNow = query(ref(rtdb, feedPath(businessId)), orderByChild('createdAt'), startAfter(now))
@@ -62,7 +62,7 @@ export function useOnActivity(businessId: string | null | undefined, categories:
           (snapshot) => {
             const sealed = { ...(snapshot.val() as Omit<Activity, 'id'>), id: snapshot.key ?? '' }
             if (kinds && !kinds.split(',').includes(sealed.category)) return
-            decryptFields(sealed, liveKey).then((activity) => !stopped && latest.current(activity))
+            decryptFields(sealed, liveKeys).then((activity) => !stopped && latest.current(activity))
           },
           () => undefined, // not allowed (rules not deployed): pages still work, just not live
         )
@@ -86,7 +86,7 @@ export function useNotifications(businessId: string, limit = 20) {
     let stops: (() => void)[] = []
     let stopped = false
     ensureLiveAccess(businessId).then(
-      ({ liveKey }) => {
+      ({ liveKeys }) => {
         if (stopped) return
         let turn = 0 // decrypting takes a moment: only the newest snapshot is shown
         stops = [
@@ -96,7 +96,7 @@ export function useNotifications(businessId: string, limit = 20) {
               const mine = ++turn
               Promise.all(
                 Object.entries((snapshot.val() ?? {}) as Record<string, Omit<Activity, 'id'>>).map(([id, item]) =>
-                  decryptFields({ ...item, id }, liveKey),
+                  decryptFields({ ...item, id }, liveKeys),
                 ),
               ).then((found) => {
                 if (!stopped && mine === turn) setEvents(found.sort((a, b) => b.createdAt - a.createdAt))

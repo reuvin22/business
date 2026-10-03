@@ -1,7 +1,17 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { IMAGE_TYPES, MAX_UPLOAD_LABEL, PDF_TYPES, uploadImage, uploadPolicyPdf } from '../api/uploads'
+import {
+  IMAGE_TYPES,
+  MAX_UPLOAD_LABEL,
+  openPrivateFile,
+  PDF_TYPES,
+  PRIVATE_FILE_TYPES,
+  uploadImage,
+  uploadPolicyPdf,
+  uploadPrivateFile,
+} from '../api/uploads'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
 import PdfViewer from './PdfViewer'
+import PrivateFileButton from './PrivateFile'
 import { cx, ui } from '../styles'
 import { shrinkImage } from '../utils/image'
 import { BusyButton, ErrorBox, Modal, Spinner } from './ui'
@@ -184,6 +194,9 @@ function FieldInput({
   if (field.type === 'pdf') {
     return <PdfInput label={label} hint={hint} url={text} onChange={onChange} businessId={businessId} />
   }
+  if (field.type === 'privateFile') {
+    return <PrivateFileInput label={label} hint={hint} value={text} onChange={onChange} businessId={businessId} />
+  }
 
   let input: ReactNode
   if (field.type === 'textarea') {
@@ -364,6 +377,74 @@ function PdfInput({
       {hint}
       <ErrorBox message={error} />
       {viewing && <PdfViewer url={url} title={label} onClose={() => setViewing(false)} />}
+    </div>
+  )
+}
+
+/** A private file (permit, ID, certificate): upload or replace, view inside the app, or remove. */
+function PrivateFileInput({
+  label,
+  hint,
+  value,
+  onChange,
+  businessId,
+}: {
+  label: string
+  hint: ReactNode
+  value: string
+  onChange: (value: string) => void
+  businessId?: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleFile(file: File | undefined) {
+    if (!file || !businessId) return
+    setError('')
+    setUploading(true)
+    try {
+      onChange(await uploadPrivateFile(businessId, file, file.name))
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="col-span-full flex flex-col gap-2">
+      <span className="text-[0.88rem] font-semibold text-heading">{label}</span>
+      {value && businessId && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-page px-3.5 py-2.5">
+          <span className="grid size-9 place-items-center rounded-md bg-chip text-[0.7rem] font-extrabold text-heading">🔒</span>
+          <span className="min-w-0 flex-1">
+            <PrivateFileButton value={value} title={label} open={() => openPrivateFile(businessId, value)} />
+          </span>
+          <button type="button" className={ui.linkDanger} onClick={() => onChange('')}>
+            Remove
+          </button>
+        </div>
+      )}
+      {businessId ? (
+        <label className={cx(ui.btnGhost, 'self-start', uploading && 'pointer-events-none opacity-60')} aria-busy={uploading}>
+          {uploading && <Spinner />}
+          {uploading ? 'Uploading…' : value ? 'Replace file' : '+ Upload file'}
+          <input
+            type="file"
+            accept={PRIVATE_FILE_TYPES}
+            className="hidden"
+            onChange={(e) => {
+              handleFile(e.target.files?.[0])
+              e.target.value = '' // lets you pick the same file again
+            }}
+          />
+        </label>
+      ) : (
+        <span className={ui.hint}>You can upload a file after the business is created.</span>
+      )}
+      <span className={ui.hint}>PDF, JPG, PNG, WEBP, or GIF · up to {MAX_UPLOAD_LABEL} · private</span>
+      {hint}
+      <ErrorBox message={error} />
     </div>
   )
 }

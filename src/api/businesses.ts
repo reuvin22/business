@@ -1,5 +1,5 @@
 import { del, get, post, put } from './client'
-import type { Business, BusinessIn, Member, MyRole } from './types'
+import type { Business, BusinessIn, Invitation, Member, MyRole, SellerAdded } from './types'
 
 export const listMyBusinesses = () => get<Business[]>('/businesses')
 export const getBusiness = (businessId: string) => get<Business>(`/businesses/${businessId}`)
@@ -13,8 +13,17 @@ export const deleteBusiness = (businessId: string) => del(`/businesses/${busines
 
 // ---- Team members ----
 export const listMembers = (businessId: string) => get<Member[]>(`/businesses/${businessId}/members`)
+/** Sends an invitation: they join when they accept it (under My businesses). */
 export const addMember = (businessId: string, body: { email: string; role: string; permissions?: string[] | null }) =>
-  post<Member>(`/businesses/${businessId}/members`, body)
+  post<Invitation>(`/businesses/${businessId}/members`, body)
+export const listInvitations = (businessId: string) => get<Invitation[]>(`/businesses/${businessId}/invitations`, { fresh: true })
+export const cancelInvitation = (businessId: string, invitationId: string) =>
+  del(`/businesses/${businessId}/invitations/${invitationId}`)
+
+// ---- Invitations to me ----
+export const listMyInvitations = () => get<Invitation[]>('/me/invitations', { fresh: true })
+export const acceptInvitation = (invitationId: string) => post<Member>(`/me/invitations/${invitationId}/accept`, {})
+export const declineInvitation = (invitationId: string) => post<void>(`/me/invitations/${invitationId}/decline`, {})
 export const updateMember = (
   businessId: string,
   userId: string,
@@ -27,7 +36,7 @@ export const listSellers = (businessId: string) => get<Member[]>(`/businesses/${
 export const createSeller = (
   businessId: string,
   body: { displayName: string; email: string; password: string; locationId: string | null },
-) => post<Member>(`/businesses/${businessId}/sellers`, body)
+) => post<SellerAdded>(`/businesses/${businessId}/sellers`, body)
 export const updateSeller = (
   businessId: string,
   userId: string,

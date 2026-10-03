@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { addMember, listMembers, removeMember, updateMember } from '../../api/businesses'
+import { addMember, cancelInvitation, listInvitations, listMembers, removeMember, updateMember } from '../../api/businesses'
 import type { Member } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { Badge, BusyButton, ConfirmButton, ErrorBox, Loading, Modal, PageHeader } from '../../components/ui'
@@ -18,6 +18,7 @@ export default function TeamPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { data: members, error, reload } = useLoad(() => listMembers(business.id), [business.id])
+  const invitations = useLoad(() => listInvitations(business.id), [business.id])
   const [editing, setEditing] = useState<Member | null>(null)
   const [adding, setAdding] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -42,7 +43,7 @@ export default function TeamPage() {
         actions={
           canManage && (
             <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
-              + Add team member
+              + Invite team member
             </button>
           )
         }
@@ -53,7 +54,7 @@ export default function TeamPage() {
           onClose={() => setAdding(false)}
           onAdded={() => {
             setAdding(false)
-            reload()
+            invitations.reload()
           }}
         />
       )}
@@ -122,6 +123,43 @@ export default function TeamPage() {
           </table>
         </div>
       )}
+      {!!invitations.data?.length && (
+        <section className="mt-2 flex flex-col gap-2">
+          <h2 className={ui.h2}>Waiting for an answer</h2>
+          <p className={cx(ui.hint, 'm-0')}>They join when they accept the invitation (under My businesses in SIRIS).</p>
+          <div className={ui.tableWrap}>
+            <table className={ui.table}>
+              <tbody>
+                {invitations.data.map((invitation) => (
+                  <tr key={invitation.id}>
+                    <td className={cx(ui.td, ui.strong)}>
+                      {invitation.displayName || invitation.email}
+                      <div className="text-[0.82rem] text-muted">{invitation.email}</div>
+                    </td>
+                    <td className={ui.td}>{invitation.role === 'SELLER' ? 'Seller' : labelOf(invitation.role)}</td>
+                    <td className={ui.td}>Invited {formatDateTime(invitation.createdAt)}</td>
+                    <td className={cx(ui.td, ui.actions)}>
+                      {canManage && (
+                        <ConfirmButton
+                          label="Cancel invitation"
+                          onConfirm={async () => {
+                            try {
+                              await cancelInvitation(business.id, invitation.id)
+                              invitations.reload()
+                            } catch (err) {
+                              setActionError((err as Error).message)
+                            }
+                          }}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       {role.role === 'OWNER' && <p className={ui.hint}>You are the owner. Owners cannot leave the business; they can only delete it (Profile → Business info).</p>}
 
       <SellersSection />
@@ -151,10 +189,13 @@ function AddMemberForm({ onAdded, onClose }: { onAdded: () => void; onClose: () 
   }
 
   return (
-    <Modal title="Add a team member" onClose={onClose}>
+    <Modal title="Invite a team member" onClose={onClose}>
       <form className={ui.modalForm} onSubmit={handleSubmit}>
-        <h2 className={ui.h2}>Add a team member</h2>
-        <p className={ui.hint}>They need to have signed up already. They get the default permissions for their role; you can change them after.</p>
+        <h2 className={ui.h2}>Invite a team member</h2>
+        <p className={ui.hint}>
+          They need to have signed up already, and they join when they accept the invitation. They get the default permissions for
+          their role; you can change them after. You can only give permissions you have yourself.
+        </p>
         <div className={ui.formGrid}>
           <label className={ui.label}>
             Email *
@@ -176,8 +217,8 @@ function AddMemberForm({ onAdded, onClose }: { onAdded: () => void; onClose: () 
           <button type="button" className={ui.btnGhost} onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <BusyButton type="submit" className={ui.btnPrimary} disabled={!email.trim()} busy={saving} busyLabel="Adding…">
-            Add member
+          <BusyButton type="submit" className={ui.btnPrimary} disabled={!email.trim()} busy={saving} busyLabel="Inviting…">
+            Send invitation
           </BusyButton>
         </div>
       </form>

@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import * as ordersApi from '../../api/orders'
+import { PRIVATE_FILE_TYPES, uploadPrivateFile } from '../../api/uploads'
 import { locationsApi } from '../../api/resources'
 import type { Location, OrderView, Ratings } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
-import { Badge, BusyButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
+import PrivateFileButton from '../../components/PrivateFile'
+import { Badge, BusyButton, ErrorBox, Loading, PageHeader, Spinner } from '../../components/ui'
 import { labelOf, PAYMENT_STATUSES, RATING_DIMENSIONS } from '../../constants/options'
 import { useBusy } from '../../hooks/useBusy'
 import { useOnActivity } from '../../hooks/useActivity'
@@ -19,6 +21,7 @@ export default function OrderDetailPage() {
   const { data: order, error, reload } = useLoad(() => ordersApi.getOrder(business.id, orderId), [business.id, orderId])
   // Live: when the other business accepts, declines, ships... this order, it changes on the screen
   useOnActivity(business.id, ['ORDERS'], (activity) => activity.link === `/orders/${orderId}` && reload())
+  const [openedAt] = useState(() => Date.now()) // "recently" is counted from when the page opened
 
   const backLink = (
     <Link to={`/business/${business.id}/orders`} className={ui.backLink}>
@@ -118,6 +121,12 @@ export default function OrderDetailPage() {
             {order.notes && <Detail label="Buyer's notes" value={order.notes} wide />}
           {order.paymentInstructions.map((p, i) => (
             <div key={i} className="col-span-full flex flex-col gap-0.5 rounded-lg bg-info-soft px-3.5 py-3 text-[0.9rem] text-heading">
+              {openedAt - p.updatedAt < RECENT_CHANGE_MS && (
+                <p className={cx(ui.alertWarn, 'mb-1.5')}>
+                  The seller changed these payment details on {formatDateTime(p.updatedAt)}. Before you pay, confirm them with the
+                  seller by phone or in person: scammers who get into an account change the account number first.
+                </p>
+              )}
               <strong>
                 {labelOf(p.paymentType)} {p.provider && `· ${p.provider}`}
               </strong>
@@ -127,6 +136,7 @@ export default function OrderDetailPage() {
             </div>
           ))}
         </DetailsCard>
+        <PaymentProofCard order={order} isBuyer={!isSeller} onChanged={reload} />
         <DetailsCard title="Timeline">
             <Detail label="Ordered" value={formatDateTime(order.orderedAt)} />
             <Detail label="Confirmed" value={formatDateTime(order.confirmedAt)} />
@@ -399,5 +409,84 @@ function shipFromLabel(location: Location, all: Location[], businessName: string
   const place = (l: Location) => `${labelOf(l.locationType)}${l.city ? ` (${l.city})` : ''}`
   const twin = all.some((other) => other.id !== location.id && place(other) === place(location))
   return `${businessName} · ${place(location)}${twin ? ` · ${location.locationName}` : ''}`
+}
+
+// Payment details changed this recently get a warning for the buyer
+const RECENT_CHANGE_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Proof of payment (the buyer attaches it, e.g. a bank transfer screenshot; both sides can open it) and who
+ * changed the payment status, and when. Proofs are private files.
+ */
+function PaymentProofCard({ order, isBuyer, onChanged }: { order: OrderView; isBuyer: boolean; onChanged: () => void }) {
+  const { business } = useBusiness()
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const canAttach = isBuyer && !['CANCELLED', 'REJECTED'].includes(order.orderStatus)
+  if (!canAttach && !order.paymentProofs.length && !order.paymentHistory.length) return null
+
+  async function attach(files: FileList | null) {
+    if (!files?.length) return
+    setError('')
+    setUploading(true)
+    try {
+      const refs = await Promise.all([...files].slice(0, 5).map((file) => uploadPrivateFile(business.id, file, file.name, 'proof')))
+      await ordersApi.addPaymentProof(business.id, order.id, refs)
+      onChanged()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <DetailsCard title="Proof of payment">
+      <div className="col-span-full flex flex-col gap-2">
+        {order.paymentProofs.length ? (
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {order.paymentProofs.map((ref, i) => (
+              <PrivateFileButton
+                key={ref}
+                value={ref}
+                label={`Proof ${i + 1}`}
+                title={`Order ${order.orderNumber} · proof of payment ${i + 1}`}
+                open={() => ordersApi.openPaymentProof(business.id, order.id, ref)}
+              />
+            ))}
+          </div>
+        ) : (
+          <span className={ui.hint}>{isBuyer ? 'After paying, attach a screenshot or receipt of the payment.' : 'The buyer has not sent a proof of payment yet.'}</span>
+        )}
+        {canAttach && (
+          <label className={cx(ui.btnGhost, 'self-start', uploading && 'pointer-events-none opacity-60')} aria-busy={uploading}>
+            {uploading && <Spinner />}
+            {uploading ? 'Uploading…' : '+ Attach proof of payment'}
+            <input
+              type="file"
+              accept={PRIVATE_FILE_TYPES}
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                attach(e.target.files)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        )}
+        <ErrorBox message={error} />
+        {!!order.paymentHistory.length && (
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[0.86rem] text-muted">
+            {order.paymentHistory.map((change, i) => (
+              <li key={i}>
+                {formatDateTime(change.at)}: marked <strong className="text-heading">{labelOf(change.paymentStatus)}</strong> by{' '}
+                {change.byName || 'the seller'}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </DetailsCard>
+  )
 }
 

@@ -1,7 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import type { FieldDef, Section, Values } from '../forms/fields'
 import { cx, ui } from '../styles'
+import { useParams } from 'react-router-dom'
+import { openPrivateFile } from '../api/uploads'
 import PdfViewer from './PdfViewer'
+import PrivateFileButton from './PrivateFile'
 import { formatDate, formatNumber } from '../utils/format'
 
 /** Shows saved values with the same sections as their form (read-only). */
@@ -72,7 +75,14 @@ export function DisplayValue({ field, value }: { field: FieldDef; value: unknown
   }
   if (field.type === 'email') return <a href={`mailto:${value}`}>{String(value)}</a>
   if (field.type === 'pdf') return <PdfLink url={String(value)} title={field.label} />
+  if (field.type === 'privateFile') return <PrivateValue value={String(value)} title={field.label} />
   return <>{String(value)}</>
+}
+
+/** A private file of the business in the address (/business/:businessId/...). */
+function PrivateValue({ value, title }: { value: string; title: string }) {
+  const { businessId = '' } = useParams()
+  return <PrivateFileButton value={value} title={title} open={() => openPrivateFile(businessId, value)} />
 }
 
 /** "View PDF": opens it inside the app. */

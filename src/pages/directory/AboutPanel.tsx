@@ -101,7 +101,6 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         <Item label="Terms" value={paymentTerms.paymentTerms.map(labelOf).join(', ')} wide />
         <Item label="Down payment" value={paymentTerms.downPaymentPercentage !== null ? `${paymentTerms.downPaymentPercentage}%` : ''} />
         <Item label="Credit days" value={paymentTerms.creditDays !== null ? String(paymentTerms.creditDays) : ''} />
-        <Item label="Notes" value={paymentTerms.notes} wide />
       </Card>
 
       <Card title="Returns">

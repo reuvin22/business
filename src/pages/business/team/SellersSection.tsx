@@ -10,6 +10,9 @@ import { useLoad } from '../../../hooks/useLoad'
 import { cx, ui } from '../../../styles'
 import { formatDateTime } from '../../../utils/format'
 
+// The same minimum as the API (longer passwords are much harder to guess)
+const MIN_PASSWORD = 10
+
 // Where the selling app (my-business-pos) is deployed, so you can send sellers the link
 const POS_URL = import.meta.env.VITE_POS_URL as string | undefined
 
@@ -23,6 +26,7 @@ export default function SellersSection() {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
   const canManage = can('members.manage')
 
   // The store is shown as the business name, then which of its locations
@@ -65,12 +69,18 @@ export default function SellersSection() {
         )}
       </div>
 
+      {notice && <p className={ui.alertInfo}>{notice}</p>}
       {adding && (
         <CreateSellerForm
           locations={locations}
           onCancel={() => setAdding(false)}
-          onCreated={() => {
+          onCreated={(invited) => {
             setAdding(false)
+            setNotice(
+              invited
+                ? 'That email already has a SIRIS account, so we sent it an invitation. They become your seller when they accept it (under My businesses), and keep their own password.'
+                : '',
+            )
             sellers.reload()
           }}
         />
@@ -127,9 +137,12 @@ export default function SellersSection() {
                       <button type="button" className={ui.link} onClick={() => setEditing({ seller: s, mode: 'details' })}>
                         Edit
                       </button>
-                      <button type="button" className={ui.link} onClick={() => setEditing({ seller: s, mode: 'password' })}>
-                        New password
-                      </button>
+                      {/* Only logins this business made: anyone else's password is theirs alone ("Forgot password") */}
+                      {s.accountManaged && (
+                        <button type="button" className={ui.link} onClick={() => setEditing({ seller: s, mode: 'password' })}>
+                          New password
+                        </button>
+                      )}
                       <ConfirmButton label="Remove" onConfirm={() => remove(s)} />
                     </td>
                   )}
@@ -167,7 +180,8 @@ function CreateSellerForm({
 }: {
   locations: Location[]
   onCancel: () => void
-  onCreated: () => void
+  /** invited: the email already had an account, so it got an invitation instead */
+  onCreated: (invited: boolean) => void
 }) {
   const { business } = useBusiness()
   const [displayName, setDisplayName] = useState('')
@@ -182,8 +196,8 @@ function CreateSellerForm({
     setError('')
     setSaving(true)
     try {
-      await createSeller(business.id, { displayName, email, password, locationId: locationId || null })
-      onCreated()
+      const result = await createSeller(business.id, { displayName, email, password, locationId: locationId || null })
+      onCreated(result.invited)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -196,8 +210,8 @@ function CreateSellerForm({
       <form className={ui.modalForm} onSubmit={handleSubmit}>
         <h2 className={ui.h2}>Create a seller account</h2>
         <p className={ui.hint}>
-          Give the seller this email and password; they sign in to the selling app with it. If the email already has an
-          account, that account is used and keeps its own password.
+          Give the seller this email and password; they sign in to the selling app with it. If the email already has a
+          SIRIS account, it gets an invitation instead, and keeps its own password.
         </p>
         <div className={ui.formGrid}>
           <label className={ui.label}>
@@ -209,7 +223,7 @@ function CreateSellerForm({
             <input className={ui.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ana@email.com" />
           </label>
           <label className={ui.label}>
-            Password * (6+ characters)
+            Password * ({MIN_PASSWORD}+ characters)
             <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
           <StoreSelect locations={locations} value={locationId} onChange={setLocationId} />
@@ -219,7 +233,7 @@ function CreateSellerForm({
           <button type="button" className={ui.btnGhost} onClick={onCancel}>
             Cancel
           </button>
-          <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim() || !email.trim() || password.length < 6} busy={saving} busyLabel="Creating…">
+          <BusyButton type="submit" className={ui.btnPrimary} disabled={!displayName.trim() || !email.trim() || password.length < MIN_PASSWORD} busy={saving} busyLabel="Creating…">
             Create account
           </BusyButton>
         </div>
@@ -314,7 +328,7 @@ function PasswordForm({ seller, onDone }: { seller: Member; onDone: () => void }
         ) : (
           <div className={ui.formGrid}>
             <label className={ui.label}>
-              New password * (6+ characters)
+              New password * ({MIN_PASSWORD}+ characters)
               <input className={ui.input} type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
             </label>
           </div>
@@ -325,7 +339,7 @@ function PasswordForm({ seller, onDone }: { seller: Member; onDone: () => void }
             {saved ? 'Close' : 'Cancel'}
           </button>
           {!saved && (
-            <BusyButton type="submit" className={ui.btnPrimary} disabled={password.length < 6} busy={saving} busyLabel="Saving…">
+            <BusyButton type="submit" className={ui.btnPrimary} disabled={password.length < MIN_PASSWORD} busy={saving} busyLabel="Saving…">
               Set password
             </BusyButton>
           )}

@@ -6,6 +6,7 @@ import { cx } from '../styles'
 import { useAuth } from '../useAuth'
 import { LogoutIcon, MenuIcon } from './icons'
 import ThemeSwitch from './ThemeSwitch'
+import VerifyEmailBanner from './VerifyEmailBanner'
 
 /** group: links with a group are listed under that heading (e.g. Selling, Business) */
 export type NavItem = { to: string; label: string; icon: ReactNode; end?: boolean; group?: string; badge?: ReactNode }
@@ -101,7 +102,10 @@ export default function SidebarLayout({ title, header, items, children }: Props)
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col">
+        <VerifyEmailBanner />
+        {children}
+      </main>
     </div>
   )
 }

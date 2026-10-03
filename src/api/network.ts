@@ -24,8 +24,8 @@ export const startConversation = (
 ) =>
   post<Conversation>(`/businesses/${businessId}/conversations`, body)
 export const openConversation = (businessId: string, conversationId: string) =>
-  // realtimeKey decrypts the live messages of this conversation (see utils/crypto.ts)
-  get<{ conversation: Conversation; messages: Message[]; realtimeKey: string }>(`/businesses/${businessId}/conversations/${conversationId}`, {
+  // realtimeKeys decrypt the live messages of this conversation, by key version (see utils/crypto.ts)
+  get<{ conversation: Conversation; messages: Message[]; realtimeKeys: Record<string, string> }>(`/businesses/${businessId}/conversations/${conversationId}`, {
     fresh: true,
   })
 /** attachments: photo links (uploaded with kind 'chat'); orderId: an order between the two businesses, sent as a card */

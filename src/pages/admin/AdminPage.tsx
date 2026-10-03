@@ -9,6 +9,8 @@ import { useLoad } from '../../hooks/useLoad'
 import { useTab } from '../../hooks/useTab'
 import { formatDate, formatDateTime } from '../../utils/format'
 import { cx, ui } from '../../styles'
+import { adminOpenPrivateFile } from '../../api/uploads'
+import PrivateFileButton from '../../components/PrivateFile'
 
 const TABS = [
   { key: 'verifications', label: 'Verification requests' },
@@ -131,9 +133,12 @@ function RequestDocuments({ request }: { request: VerificationRequest }) {
     <ul className="flex list-disc flex-col gap-1.5 pl-4.5 text-[0.9rem]">
       {attached.map((d) => (
         <li key={d.id}>
-          <a href={d.fileUrl} target="_blank" rel="noreferrer">
-            {labelOf(d.documentType)} — {d.fileName || 'open file'}
-          </a>
+          <PrivateFileButton
+            value={d.fileUrl}
+            label={`${labelOf(d.documentType)} — ${d.fileName || 'open file'}`}
+            title={`${request.businessName} · ${labelOf(d.documentType)}`}
+            open={() => adminOpenPrivateFile(d.fileUrl)}
+          />
           {d.expiryDate && <span className="text-[0.82rem] text-muted"> · expires {formatDate(d.expiryDate)}</span>} <Badge value={d.verificationStatus} />
         </li>
       ))}
@@ -351,9 +356,7 @@ function BusinessCertifications({ businessId }: { businessId: string }) {
         <li key={c.id}>
           <strong>{c.certificationName}</strong> {c.certificateNumber && `#${c.certificateNumber}`}{' '}
           {c.documentUrl && (
-            <a href={c.documentUrl} target="_blank" rel="noreferrer">
-              view copy
-            </a>
+            <PrivateFileButton value={c.documentUrl} label="view copy" title={c.certificationName} open={() => adminOpenPrivateFile(c.documentUrl)} />
           )}{' '}
           <Badge value={c.verificationStatus} />{' '}
           <BusyButton className={ui.link} busy={running === `${c.id}:VERIFIED`} disabled={running !== ''} onClick={() => setStatus(c.id, 'VERIFIED')}>

@@ -78,6 +78,8 @@ export type Member = Saved & {
   joinedAt: number
   /** Sellers only: the store they sell from (null = any) */
   locationId?: string | null
+  /** Sellers only: this business made the login, so it may set its password */
+  accountManaged?: boolean
 }
 
 // ---- Profile ---------------------------------------------------------------------------
@@ -429,6 +431,10 @@ export type Order = Saved & {
   deliveredAt: number | null
   completedAt: number | null
   cancelledAt: number | null
+  /** The buyer's proof of payment: private files (open with ordersApi.openPaymentProof) */
+  paymentProofs: string[]
+  /** Every change of the payment status: who made it, and when */
+  paymentHistory: { paymentStatus: string; byName: string; byBusinessId: string; at: number }[]
 }
 
 export type PaymentInstructions = {
@@ -437,6 +443,8 @@ export type PaymentInstructions = {
   accountNumber: string
   provider: string
   instructions: string
+  /** When the seller last changed these details (the buyer is warned when that was recently) */
+  updatedAt: number
 }
 
 export type OrderView = Order & { paymentInstructions: PaymentInstructions[] }
@@ -551,12 +559,12 @@ export type ChatAccess = {
   teamPath: string
   marketPath: string
   /** What is said in the Realtime Database is encrypted: the keys of each room (see utils/crypto.ts) */
-  teamKey: string
-  marketKey: string
-  liveKey: string
+  teamKeys: Record<string, string>
+  marketKeys: Record<string, string>
+  liveKeys: Record<string, string>
 }
 
-export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS' | 'ORDERS'
+export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS' | 'ORDERS' | 'SALES'
 
 /** Something that happened to a business: in its history, and live as a notification. */
 export type Activity = {
@@ -588,7 +596,8 @@ export type PublicProfile = {
   supplierProfile: SupplierProfile
   delivery: DeliverySettings
   deliveryZones: DeliveryZone[]
-  paymentTerms: PaymentTerms
+  /** Public: without the credit limit and notes (those are the seller's own business) */
+  paymentTerms: Pick<PaymentTerms, 'paymentTerms' | 'creditDays' | 'downPaymentPercentage'>
   returnPolicy: ReturnPolicy
   paymentTypes: string[]
   /** The types with their banks / e-wallets / cards (never the account details) */
@@ -638,4 +647,23 @@ export type PosCustomTemplate = {
 }
 /** custom is kept while a built-in template is in use, to switch back to later. */
 export type PosSettings = { template: PosTemplate; custom: PosCustomTemplate }
+
+/** An invitation to join a team (as a member, or a seller with an account they already have). */
+export type Invitation = {
+  id: string
+  businessId: string
+  businessName: string
+  businessLogo: string
+  uid: string
+  email: string
+  displayName: string
+  role: string
+  permissions: string[]
+  locationId: string | null
+  invitedByName: string
+  createdAt: number
+}
+
+/** A new seller: a login made for them (member), or an invitation when their email already has an account. */
+export type SellerAdded = { invited: boolean; member: Member | null; invitation: Invitation | null }
 
