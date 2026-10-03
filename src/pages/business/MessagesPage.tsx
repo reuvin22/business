@@ -6,12 +6,13 @@ import * as network from '../../api/network'
 import type { ChatAccess, ChatMessage, LiveMessage, OrderCard } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { uploadImage } from '../../api/uploads'
-import { Badge, BusyButton, EmptyState, ErrorBox, Loading, PageHeader, Spinner } from '../../components/ui'
+import { Badge, BusyButton, EmptyState, ErrorBox, PageHeader, Spinner } from '../../components/ui'
 import { useOnActivity } from '../../hooks/useActivity'
 import { useLoad } from '../../hooks/useLoad'
 import { useRealtimeMessages, useRealtimeValue } from '../../hooks/useRealtime'
 import { formatDateTime, formatMoney, initials } from '../../utils/format'
 import { shrinkImage } from '../../utils/image'
+import { useAuth } from '../../useAuth'
 import { cx, ui } from '../../styles'
 
 // The conversation list (who wrote last, unread dots) is checked this often. The messages
@@ -61,7 +62,7 @@ export default function MessagesPage() {
 
           <SidebarHeading>Direct messages</SidebarHeading>
           {!conversations.data ? (
-            <Loading />
+            <ConversationsSkeleton />
           ) : conversations.data.length === 0 ? (
             <p className={cx(ui.hint, 'm-0 px-4 py-3')}>No conversations yet. Start one from a business's page in the directory.</p>
           ) : (
@@ -81,7 +82,7 @@ export default function MessagesPage() {
 
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           {!access.data ? (
-            access.error ? <EmptyState text="Messages are not available right now." /> : <Loading />
+            access.error ? <EmptyState text="Messages are not available right now." /> : <ChatSkeleton />
           ) : selected === 'team' || selected === 'market' ? (
             <ChannelView key={selected} channel={selected} access={access.data} canPost={selected === 'team' || can('messages.send')} />
           ) : selected ? (
@@ -148,16 +149,6 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
   const { business } = useBusiness()
   const info = CHANNEL_INFO[channel]
   const messages = useRealtimeMessages<Omit<ChatMessage, 'id'>>(channel === 'team' ? access.teamPath : access.marketPath)
-  const [error, setError] = useState('')
-
-  async function remove(id: string) {
-    setError('')
-    try {
-      await chat.deleteMarketMessage(business.id, id)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }
 
   return (
     <>
@@ -165,16 +156,28 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
         <strong className="text-heading">{info.title}</strong>
         <p className={cx(ui.hint, 'm-0')}>{info.about(business.businessName)}</p>
       </header>
-      <ErrorBox message={messages.error || error} />
+      <ErrorBox message={messages.error} />
       <MessageList count={messages.data?.length} loading={!messages.data && !messages.error} empty={info.empty}>
         {messages.data?.map((m) => {
           const mine = channel === 'team' ? m.senderUid === access.uid : m.businessId === business.id
+          const sentByMe = m.senderUid === access.uid
           return (
             <Bubble
               key={m.id}
               mine={mine}
               text={m.message}
               photos={m.attachments}
+              edited={!!m.editedAt}
+              onEdit={
+                sentByMe
+                  ? (text) => (channel === 'team' ? chat.editTeamMessage : chat.editMarketMessage)(business.id, m.id, text)
+                  : undefined
+              }
+              onDelete={
+                sentByMe || (channel === 'market' && mine && canPost)
+                  ? () => (channel === 'team' ? chat.deleteTeamMessage : chat.deleteMarketMessage)(business.id, m.id)
+                  : undefined
+              }
               footer={
                 <>
                   {channel === 'market' ? (
@@ -190,14 +193,6 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
                   )}
                   {' · '}
                   {formatDateTime(m.createdAt)}
-                  {channel === 'market' && mine && canPost && (
-                    <>
-                      {' · '}
-                      <button type="button" className={cx(ui.linkDanger, 'text-[0.72rem]')} onClick={() => remove(m.id)}>
-                        Delete
-                      </button>
-                    </>
-                  )}
                 </>
               }
             />
@@ -224,6 +219,7 @@ function ChannelView({ channel, access, canPost }: { channel: Channel; access: C
 
 function Thread({ conversationId, onChange, canSend }: { conversationId: string; onChange: () => void; canSend: boolean }) {
   const { business } = useBusiness()
+  const { user } = useAuth()
   // Opening it through the API sets the chat up for live reading and marks it as read
   const opened = useLoad(() => network.openConversation(business.id, conversationId), [business.id, conversationId])
   const path = opened.data ? `chat/dm/${conversationId}` : null
@@ -246,7 +242,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadAt, business.id, conversationId])
 
-  if (!opened.data) return opened.error ? <ErrorBox message={opened.error} /> : <Loading />
+  if (!opened.data) return opened.error ? <ErrorBox message={opened.error} /> : <ChatSkeleton />
 
   return (
     <>
@@ -257,6 +253,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
       <MessageList count={messages?.length} loading={!messages} empty="No messages yet.">
         {messages?.map((m) => {
           const mine = m.senderBusinessId === business.id
+          const sentByMe = m.senderUid === user?.uid
           return (
             <Bubble
               key={m.id}
@@ -264,6 +261,9 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
               text={m.message}
               photos={m.attachments}
               order={m.order ?? undefined}
+              edited={!!m.editedAt}
+              onEdit={sentByMe ? (text) => network.editMessage(business.id, conversationId, m.id, text).then(onChange) : undefined}
+              onDelete={sentByMe ? () => network.deleteMessage(business.id, conversationId, m.id).then(onChange) : undefined}
               footer={
                 <>
                   {m.senderName} · {formatDateTime(m.createdAt)}
@@ -320,16 +320,128 @@ function NewConversation({ toBusinessId, canSend, onStarted }: { toBusinessId: s
 // ---- Shared pieces --------------------------------------------------------------------------------
 
 /** The scrolling list of messages; it keeps the newest one in view. */
+// Within this many pixels of the bottom counts as "reading the newest messages"
+const NEAR_BOTTOM_PX = 120
+
+/**
+ * The scrolling list of messages. It opens at the newest message and follows new ones while you are near
+ * the bottom. When you scroll up to read older ones it stays put, and an arrow takes you back to the newest.
+ */
 function MessageList({ count, loading, empty, children }: { count: number | undefined; loading: boolean; empty: string; children: ReactNode }) {
-  const bottom = useRef<HTMLDivElement>(null)
+  const list = useRef<HTMLDivElement>(null)
+  const nearBottom = useRef(true)
+  const seen = useRef<number | undefined>(undefined) // how many messages there were last time
+  const [showJump, setShowJump] = useState(false)
+  const [unseen, setUnseen] = useState(false) // new messages came while scrolled up
+
+  const toBottom = (smooth: boolean) => {
+    const el = list.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+  }
+
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'end' })
+    if (count === undefined) return
+    const first = seen.current === undefined
+    const grew = !first && count > (seen.current ?? 0)
+    seen.current = count
+    if (first) toBottom(false) // open at the newest message
+    else if (grew && nearBottom.current) toBottom(true) // follow new messages while reading the newest
+    else if (grew) setUnseen(true) // reading older ones: do not jump, show the arrow instead
   }, [count])
 
+  function handleScroll() {
+    const el = list.current
+    if (!el) return
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+    nearBottom.current = distance < NEAR_BOTTOM_PX
+    setShowJump(!nearBottom.current)
+    if (nearBottom.current) setUnseen(false)
+  }
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4 max-md:max-h-[55vh]">
-      {loading ? <Loading /> : count === 0 ? <p className={cx(ui.hint, 'm-0 p-4')}>{empty}</p> : children}
-      <div ref={bottom} />
+    <div className="relative flex min-h-0 flex-1 flex-col max-md:max-h-[55vh]">
+      <div ref={list} onScroll={handleScroll} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4.5 py-4">
+        {loading ? <BubblesSkeleton /> : count === 0 ? <p className={cx(ui.hint, 'm-0 p-4')}>{empty}</p> : children}
+      </div>
+      {showJump && !loading && (
+        <button
+          type="button"
+          onClick={() => {
+            toBottom(true)
+            setUnseen(false)
+          }}
+          className={cx(
+            'absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface text-heading shadow-lg hover:border-accent',
+            unseen ? 'px-3.5 py-2 text-[0.85rem] font-semibold' : 'size-10 justify-center',
+          )}
+          aria-label="Go to the newest messages"
+          title="Go to the newest messages"
+        >
+          <svg viewBox="0 0 24 24" className="size-4.5" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+          {unseen && 'New messages'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ---- Skeletons (while a chat loads) -----------------------------------------------------------
+
+const bone = 'animate-pulse rounded-md bg-chip'
+
+/** Placeholder bubbles, on both sides, the shape of a conversation. */
+function BubblesSkeleton() {
+  const rows: [boolean, string, string][] = [
+    [false, 'w-56', 'h-12'],
+    [true, 'w-44', 'h-10'],
+    [false, 'w-72', 'h-16'],
+    [true, 'w-60', 'h-12'],
+    [false, 'w-40', 'h-10'],
+    [true, 'w-52', 'h-14'],
+  ]
+  return (
+    <div className="flex flex-col gap-3" aria-label="Loading the messages" role="status">
+      {rows.map(([mine, width, height], i) => (
+        <div key={i} className={cx(bone, 'max-w-[70%] rounded-xl', width, height, mine ? 'self-end' : 'self-start')} />
+      ))}
+    </div>
+  )
+}
+
+/** The whole chat while it opens: its header, the bubbles, and the message box. */
+function ChatSkeleton() {
+  return (
+    <>
+      <div className="flex items-center gap-3 border-b border-line px-4.5 py-3.5">
+        <div className={cx(bone, 'h-5 w-40')} />
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden px-4.5 py-4">
+        <BubblesSkeleton />
+      </div>
+      <div className="flex items-end gap-2.5 border-t border-line px-3.5 py-3">
+        <div className={cx(bone, 'size-11 rounded-lg')} />
+        <div className={cx(bone, 'h-14 flex-1 rounded-lg')} />
+        <div className={cx(bone, 'h-11 w-20 rounded-lg')} />
+      </div>
+    </>
+  )
+}
+
+/** The list of direct messages while it loads. */
+function ConversationsSkeleton() {
+  return (
+    <div className="flex flex-col" role="status" aria-label="Loading the conversations">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex items-center gap-2.5 border-b border-line px-3.5 py-3">
+          <div className={cx(bone, 'size-7.5 shrink-0 rounded-full')} />
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div className={cx(bone, 'h-3.5 w-28')} />
+            <div className={cx(bone, 'h-3 w-40')} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -340,20 +452,128 @@ function Bubble({
   footer,
   order,
   photos = [],
+  edited = false,
+  onEdit,
+  onDelete,
 }: {
   mine: boolean
   text: string
   footer: ReactNode
   order?: OrderCard
   photos?: string[]
+  edited?: boolean
+  /** Given = the user may change this message (they sent it) */
+  onEdit?: (text: string) => Promise<unknown>
+  /** Given = the user may delete this message */
+  onDelete?: () => Promise<unknown>
 }) {
+  const [menu, setMenu] = useState<'closed' | 'open' | 'confirm-delete'>('closed')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(text)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const box = useRef<HTMLDivElement>(null)
+  const hasMenu = !!(onEdit || onDelete)
+
+  // The menu closes with a click anywhere outside the message (or Escape)
+  useEffect(() => {
+    if (menu === 'closed') return
+    const outside = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setMenu('closed')
+    const escape = (e: KeyboardEvent) => e.key === 'Escape' && setMenu('closed')
+    document.addEventListener('mousedown', outside)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('mousedown', outside)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [menu])
+
+  async function run(action: () => Promise<unknown>) {
+    setError('')
+    setBusy(true)
+    try {
+      await action()
+      setEditing(false)
+      setMenu('closed')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div
+      ref={box}
+      onClick={(e) => {
+        // Links, photos, and buttons inside keep working; a click on the message itself opens the menu
+        if (!hasMenu || editing || (e.target as HTMLElement).closest('a, button, textarea')) return
+        setMenu((m) => (m === 'closed' ? 'open' : 'closed'))
+      }}
       className={cx(
-        'flex max-w-[70%] flex-col gap-2 px-3.5 py-2.5 max-sm:max-w-[88%]',
+        'relative flex max-w-[70%] flex-col gap-2 px-3.5 py-2.5 max-sm:max-w-[88%]',
         mine ? 'self-end rounded-[12px_12px_4px_12px] bg-info-soft' : 'self-start rounded-[12px_12px_12px_4px] bg-chip',
+        hasMenu && !editing && 'cursor-pointer',
+        menu !== 'closed' && 'ring-2 ring-accent',
       )}
     >
+      {menu !== 'closed' && (
+        <div
+          className={cx(
+            'absolute top-full z-20 mt-1.5 flex items-center gap-1 rounded-lg border border-line bg-surface p-1 text-[0.85rem] shadow-xl',
+            mine ? 'right-0' : 'left-0',
+          )}
+          role="menu"
+        >
+          {menu === 'open' ? (
+            <>
+              {onEdit && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="cursor-pointer rounded-md border-0 bg-transparent px-3 py-1.5 font-semibold text-heading hover:bg-chip"
+                  onClick={() => {
+                    setDraft(text)
+                    setEditing(true)
+                    setMenu('closed')
+                  }}
+                >
+                  Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="cursor-pointer rounded-md border-0 bg-transparent px-3 py-1.5 font-semibold text-danger hover:bg-danger-soft"
+                  onClick={() => setMenu('confirm-delete')}
+                >
+                  Delete
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="px-2 text-heading">Delete for everyone?</span>
+              <button
+                type="button"
+                className="cursor-pointer rounded-md border-0 bg-danger px-3 py-1.5 font-semibold text-white disabled:opacity-60"
+                disabled={busy}
+                onClick={() => onDelete && run(onDelete)}
+              >
+                {busy ? 'Deleting…' : 'Delete'}
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-md border-0 bg-transparent px-3 py-1.5 font-semibold text-heading hover:bg-chip"
+                onClick={() => setMenu('closed')}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {order && <OrderCardView card={order} />}
       {photos.length > 0 && (
         <div className={cx('grid gap-1.5', photos.length > 1 && 'grid-cols-2')}>
@@ -369,8 +589,46 @@ function Bubble({
           ))}
         </div>
       )}
-      {text && <p className="whitespace-pre-line text-heading">{text}</p>}
-      <span className="mt-1 block text-[0.72rem] text-muted">{footer}</span>
+      {editing ? (
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (onEdit) run(() => onEdit(draft.trim()))
+          }}
+        >
+          <textarea
+            className={cx(ui.input, 'min-w-56 resize-y')}
+            rows={2}
+            maxLength={2000}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                e.currentTarget.form?.requestSubmit()
+              }
+              if (e.key === 'Escape') setEditing(false)
+            }}
+          />
+          <div className="flex justify-end gap-2">
+            <button type="button" className={cx(ui.btnGhost, 'px-3 py-1.5')} onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </button>
+            <BusyButton type="submit" className={cx(ui.btnPrimary, 'px-3 py-1.5')} busy={busy} disabled={draft.trim() === text}>
+              Save
+            </BusyButton>
+          </div>
+        </form>
+      ) : (
+        text && <p className="whitespace-pre-line text-heading">{text}</p>
+      )}
+      {error && <p className="m-0 text-[0.8rem] text-danger">{error}</p>}
+      <span className="mt-1 block text-[0.72rem] text-muted">
+        {footer}
+        {edited && ' · edited'}
+      </span>
     </div>
   )
 }

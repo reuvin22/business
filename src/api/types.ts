@@ -496,6 +496,8 @@ export type Message = Saved & {
   attachments: string[]
   /** The order the message is about, as a small card */
   order?: OrderCard | null
+  /** Set when the sender changed the text */
+  editedAt?: number | null
   readAt: number | null
 }
 
@@ -521,6 +523,8 @@ export type ChatMessage = {
   message: string
   /** Photos */
   attachments?: string[]
+  /** Set when the sender changed the text */
+  editedAt?: number | null
   createdAt: number
 }
 
@@ -534,6 +538,8 @@ export type LiveMessage = {
   /** Photos */
   attachments?: string[]
   order?: OrderCard
+  /** Set when the sender changed the text */
+  editedAt?: number | null
   createdAt: number
 }
 

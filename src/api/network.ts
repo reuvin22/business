@@ -1,4 +1,4 @@
-import { get, post } from './client'
+import { del, get, post, put } from './client'
 import type { Conversation, Message, RelationshipView, Review } from './types'
 
 // ---- Relationships ----
@@ -33,6 +33,12 @@ export const sendMessage = (
   conversationId: string,
   body: { message: string; attachments?: string[]; orderId?: string | null },
 ) => post<Message>(`/businesses/${businessId}/conversations/${conversationId}/messages`, { attachments: [], orderId: null, ...body })
+
+/** Only the sender may change or delete their message */
+export const editMessage = (businessId: string, conversationId: string, messageId: string, message: string) =>
+  put<Message>(`/businesses/${businessId}/conversations/${conversationId}/messages/${messageId}`, { message })
+export const deleteMessage = (businessId: string, conversationId: string, messageId: string) =>
+  del(`/businesses/${businessId}/conversations/${conversationId}/messages/${messageId}`)
 
 // ---- Reviews about this business ----
 export const listMyReviews = (businessId: string) => get<Review[]>(`/businesses/${businessId}/reviews`)
