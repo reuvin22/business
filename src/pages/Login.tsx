@@ -12,6 +12,7 @@ import {
 import { auth, googleProvider } from '../firebase'
 import { BusyButton } from '../components/ui'
 import { cx, ui } from '../styles'
+import { nextPath } from '../utils/nextPath'
 
 type Mode = 'signin' | 'signup'
 
@@ -57,7 +58,7 @@ export default function Login() {
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const goNext = () => navigate('/dashboard/business', { replace: true })
+  const goNext = () => navigate(nextPath(window.location.search), { replace: true })
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()

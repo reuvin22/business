@@ -18,12 +18,14 @@ type Props = {
   currency: string
   /** The product to edit, or null to add a new one. */
   existing: ProductFull | null
+  /** A new product's barcode, already known (e.g. scanned with the phone scanner) */
+  barcode?: string
   onSaved: (saved: ProductFull) => void
   onCancel: () => void
 }
 
 /** The whole product in one form: details, order rules, variants, selling prices, images, and specs. */
-export default function ProductForm({ businessId, currency, existing, onSaved, onCancel }: Props) {
+export default function ProductForm({ businessId, currency, existing, barcode, onSaved, onCancel }: Props) {
   const { data: brands = [] } = useLoad(() => brandsApi.list(businessId), [businessId])
   const { data: categories = [] } = useLoad(listCategories, [])
 
@@ -32,7 +34,7 @@ export default function ProductForm({ businessId, currency, existing, onSaved, o
   const [images, setImages] = useState<ProductImage[]>(existing?.product.images ?? [])
   const [specs, setSpecs] = useState<Pair[]>(existing?.product.specifications ?? [])
 
-  const start = existing ? productToForm(existing.product) : newProductValues
+  const start = existing ? productToForm(existing.product) : barcode ? { ...newProductValues, barcode } : newProductValues
   const sections = productSections(
     brands.map((b) => ({ value: b.id, label: b.brandName })),
     categoryOptions(categories),

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { listAllPrices, listProducts } from '../../api/catalog'
 import { listCategories, searchBusinesses } from '../../api/directory'
 import { brandsApi, customerPricesApi } from '../../api/resources'
@@ -62,8 +62,24 @@ function ProductsTab() {
   const { data: prices = [] } = useLoad(() => listAllPrices(business.id), [business.id])
   const { data: brands = [] } = useLoad(() => brandsApi.list(business.id), [business.id])
   const { data: categories = [] } = useLoad(listCategories, [])
-  const [adding, setAdding] = useState(false)
   const canEdit = can('products.manage')
+  // A link from the phone scanner: /products?add=1&barcode=... opens "Add product" with that barcode
+  const [params, setParams] = useSearchParams()
+  const [adding, setAdding] = useState(() => canEdit && params.get('add') === '1')
+  const [startBarcode] = useState(() => (params.get('add') === '1' ? (params.get('barcode') ?? '').trim().slice(0, 64) : ''))
+  useEffect(() => {
+    // Opened once: a reload (or the back button) does not open it again
+    if (params.has('add') || params.has('barcode')) {
+      setParams(
+        (p) => {
+          p.delete('add')
+          p.delete('barcode')
+          return p
+        },
+        { replace: true },
+      )
+    }
+  }, [params, setParams])
 
   /** The lowest active price for buying one unit, or null when there is none. */
   function startingPrice(productId: string) {
@@ -92,6 +108,7 @@ function ProductsTab() {
           businessId={business.id}
           currency={business.currency}
           existing={null}
+          barcode={startBarcode}
           onCancel={() => setAdding(false)}
           onSaved={(saved) => navigate(`/business/${business.id}/products/${saved.product.id}`)}
         />

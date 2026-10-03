@@ -79,9 +79,9 @@ export function DisplayValue({ field, value }: { field: FieldDef; value: unknown
   return <>{String(value)}</>
 }
 
-/** A private file of the business in the address (/business/:businessId/...). */
+/** A private file of the business in the address (/business/:id/...). */
 function PrivateValue({ value, title }: { value: string; title: string }) {
-  const { businessId = '' } = useParams()
+  const { id: businessId = '' } = useParams()
   return <PrivateFileButton value={value} title={title} open={() => openPrivateFile(businessId, value)} />
 }
 
