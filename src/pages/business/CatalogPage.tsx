@@ -16,6 +16,8 @@ import { unitProfit } from '../../utils/profit'
 import { categoryName } from '../../utils/options'
 import ProductForm from './catalog/ProductForm'
 import { cx, ui } from '../../styles'
+import PhoneScannerConnect from '../../components/PhoneScannerConnect'
+import { useOnActivity } from '../../hooks/useActivity'
 
 const TABS = [
   { key: 'products', label: 'Products' },
@@ -58,7 +60,9 @@ export default function CatalogPage() {
 function ProductsTab() {
   const { business, can } = useBusiness()
   const navigate = useNavigate()
-  const { data: products, loading, error } = useLoad(() => listProducts(business.id), [business.id])
+  const { data: products, loading, error, reload } = useLoad(() => listProducts(business.id), [business.id])
+  // Live: a product registered with the phone scanner (or by a teammate) shows up at once
+  useOnActivity(business.id, ['PRODUCTS'], () => reload())
   const { data: prices = [] } = useLoad(() => listAllPrices(business.id), [business.id])
   const { data: brands = [] } = useLoad(() => brandsApi.list(business.id), [business.id])
   const { data: categories = [] } = useLoad(listCategories, [])
@@ -97,9 +101,12 @@ function ProductsTab() {
           Click a product to see its variants, prices, and stock. Profit / unit = selling price for one − cost price.
         </p>
         {canEdit && !adding && (
-          <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
-            + Add product
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <PhoneScannerConnect businessId={business.id} />
+            <button type="button" className={ui.btnPrimary} onClick={() => setAdding(true)}>
+              + Add product
+            </button>
+          </div>
         )}
       </div>
 
