@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import * as ordersApi from '../../api/orders'
 import { locationsApi } from '../../api/resources'
-import type { OrderView, Ratings } from '../../api/types'
+import type { Location, OrderView, Ratings } from '../../api/types'
 import { useBusiness } from '../../businessContext'
 import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
 import { Badge, BusyButton, ErrorBox, Loading, PageHeader } from '../../components/ui'
@@ -230,7 +230,7 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
                 <option value="">Select location…</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {l.locationName}
+                    {shipFromLabel(l, locations, business.businessName)}
                   </option>
                 ))}
               </select>
@@ -392,3 +392,12 @@ function ReviewForm({ order, onDone }: { order: OrderView; onDone: () => void })
     </form>
   )
 }
+
+/** "Motor Parts · Head office (Los Baños)": the business ships, from one of its places. The place's own name is
+ * added only when two places would otherwise look the same. */
+function shipFromLabel(location: Location, all: Location[], businessName: string): string {
+  const place = (l: Location) => `${labelOf(l.locationType)}${l.city ? ` (${l.city})` : ''}`
+  const twin = all.some((other) => other.id !== location.id && place(other) === place(location))
+  return `${businessName} · ${place(location)}${twin ? ` · ${location.locationName}` : ''}`
+}
+
