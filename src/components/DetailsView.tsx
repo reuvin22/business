@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { FieldDef, Section, Values } from '../forms/fields'
 import { cx, ui } from '../styles'
+import PdfViewer from './PdfViewer'
 import { formatDate, formatNumber } from '../utils/format'
 
 /** Shows saved values with the same sections as their form (read-only). */
@@ -70,5 +71,19 @@ export function DisplayValue({ field, value }: { field: FieldDef; value: unknown
     )
   }
   if (field.type === 'email') return <a href={`mailto:${value}`}>{String(value)}</a>
+  if (field.type === 'pdf') return <PdfLink url={String(value)} title={field.label} />
   return <>{String(value)}</>
+}
+
+/** "View PDF": opens it inside the app. */
+function PdfLink({ url, title }: { url: string; title: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" className={ui.link} onClick={() => setOpen(true)}>
+        View PDF
+      </button>
+      {open && <PdfViewer url={url} title={title} onClose={() => setOpen(false)} />}
+    </>
+  )
 }

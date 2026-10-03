@@ -19,6 +19,7 @@ export type FieldType =
   | 'checkbox' // true / false
   | 'checkboxes' // several choices from `options` (a list)
   | 'image' // an image link, with an upload button when the form knows the business
+  | 'pdf' // a PDF file (upload, view inside the app, remove), when the form knows the business
 
 export type FieldDef = {
   key: string

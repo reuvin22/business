@@ -341,6 +341,8 @@ export type ReturnPolicy = Saved & {
   damagedGoodsPolicy: string
   defectiveGoodsPolicy: string
   policyDescription: string
+  /** The full policy as a PDF (read inside the app) */
+  policyFileUrl?: string
 }
 
 export type SupplierProfile = Saved & Record<string, boolean>

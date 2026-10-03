@@ -52,6 +52,7 @@ export default function SettingsForm<T extends Saved>({
         <FieldForm
           sections={sections}
           initial={data}
+          businessId={businessId}
           submitLabel="Save changes"
           onCancel={() => setEditing(false)}
           onSubmit={async (values) => {

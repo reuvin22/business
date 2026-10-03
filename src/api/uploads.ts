@@ -2,7 +2,7 @@ import { upload } from './client'
 import type { MediaType } from './types'
 
 /** Where a file belongs: a product photo/video, the business's own logo/cover, or a photo sent in a chat. */
-export type ImageKind = 'product' | 'business' | 'chat'
+export type ImageKind = 'product' | 'business' | 'chat' | 'policy'
 
 /** The largest file the server takes (each image or video). */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -24,3 +24,10 @@ export const uploadImage = (businessId: string, file: Blob, fileName: string, ki
 
 /** Uploads a product photo or video. Returns its public URL and whether it is an image or a video. */
 export const uploadProductMedia = (businessId: string, file: Blob, fileName: string) => send(businessId, file, fileName, 'product')
+
+export const PDF_TYPES = 'application/pdf'
+
+/** Uploads a PDF of the business (e.g. its full return policy) and returns its public URL. */
+export const uploadPolicyPdf = (businessId: string, file: Blob, fileName: string) =>
+  send(businessId, file, fileName, 'policy').then((result) => result.url)
+

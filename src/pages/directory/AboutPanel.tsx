@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Location, PublicProfile } from '../../api/types'
 import { DetailItem, DetailsCard, DetailsGrid } from '../../components/DetailsView'
-import { Badge } from '../../components/ui'
+import PdfViewer from '../../components/PdfViewer'
+import { Badge, Modal } from '../../components/ui'
 import { labelOf, SUPPLIER_CAPABILITIES } from '../../constants/options'
 import { formatDate, formatMoney } from '../../utils/format'
 import { groupHours, isOpenNow } from '../../utils/hours'
@@ -107,7 +108,11 @@ export default function AboutPanel({ profile }: { profile: PublicProfile }) {
         <Item label="Returns" value={returnPolicy.returnAllowed ? `Accepted within ${returnPolicy.returnPeriodDays ?? '?'} days` : 'Not accepted'} />
         <Item label="Refund" value={returnPolicy.refundMethod ? labelOf(returnPolicy.refundMethod) : ''} />
         <Item label="Replacement" value={returnPolicy.replacementAvailable ? 'Available' : ''} />
-        <Item label="Policy" value={returnPolicy.policyDescription} wide />
+        {(returnPolicy.policyDescription || returnPolicy.policyFileUrl) && (
+          <DetailItem label="Full policy" wide>
+            <FullPolicyButton policy={returnPolicy} businessName={business.businessName} />
+          </DetailItem>
+        )}
       </Card>
 
       {profile.certifications.length > 0 && (
@@ -245,6 +250,38 @@ function ClockIcon() {
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
     </svg>
+  )
+}
+
+/** The full return policy, read in a dialog: the text and/or the PDF (shown inside the app). */
+function FullPolicyButton({ policy, businessName }: { policy: PublicProfile['returnPolicy']; businessName: string }) {
+  const [open, setOpen] = useState(false)
+  const title = `${businessName} · Return policy`
+  const text = policy.policyDescription && <p className="m-0 whitespace-pre-line text-heading">{policy.policyDescription}</p>
+  return (
+    <>
+      <button type="button" className={cx(ui.btnGhost, 'mt-1 px-3 py-1.5')} onClick={() => setOpen(true)}>
+        View full policy
+      </button>
+      {open &&
+        (policy.policyFileUrl ? (
+          <PdfViewer url={policy.policyFileUrl} title={title} onClose={() => setOpen(false)}>
+            {text}
+          </PdfViewer>
+        ) : (
+          <Modal title={title} onClose={() => setOpen(false)} size="md">
+            <div className="flex flex-col gap-4 p-6 max-sm:p-4">
+              <h2 className={ui.h2}>{title}</h2>
+              {text}
+              <div className="flex justify-end">
+                <button type="button" className={ui.btnPrimary} onClick={() => setOpen(false)} autoFocus>
+                  Close
+                </button>
+              </div>
+            </div>
+          </Modal>
+        ))}
+    </>
   )
 }
 

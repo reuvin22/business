@@ -362,7 +362,13 @@ export const returnPolicySections: Section[] = [
       { key: 'refundMethod', label: 'Refund method', type: 'select', options: opt.REFUND_METHODS, emptyAsNull: true },
       { key: 'damagedGoodsPolicy', label: 'Damaged goods', type: 'textarea' },
       { key: 'defectiveGoodsPolicy', label: 'Defective goods', type: 'textarea' },
-      { key: 'policyDescription', label: 'Full policy', type: 'textarea' },
+      { key: 'policyDescription', label: 'Full policy', type: 'textarea', hint: 'Type it here, upload it as a PDF below, or both.' },
+      {
+        key: 'policyFileUrl',
+        label: 'Full policy (PDF)',
+        type: 'pdf',
+        hint: 'Buyers read it inside the app (it does not download or open a new tab).',
+      },
     ],
   },
 ]
