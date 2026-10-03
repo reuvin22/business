@@ -545,7 +545,16 @@ export type LiveMessage = {
   createdAt: number
 }
 
-export type ChatAccess = { uid: string; businessId: string; teamPath: string; marketPath: string }
+export type ChatAccess = {
+  uid: string
+  businessId: string
+  teamPath: string
+  marketPath: string
+  /** What is said in the Realtime Database is encrypted: the keys of each room (see utils/crypto.ts) */
+  teamKey: string
+  marketKey: string
+  liveKey: string
+}
 
 export type ActivityCategory = 'PRODUCTS' | 'MESSAGES' | 'CONNECTIONS' | 'ORDERS'
 

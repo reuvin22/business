@@ -148,7 +148,10 @@ const CHANNEL_INFO: Record<Channel, { title: string; about: (businessName: strin
 function ChannelView({ channel, access, canPost }: { channel: Channel; access: ChatAccess; canPost: boolean }) {
   const { business } = useBusiness()
   const info = CHANNEL_INFO[channel]
-  const messages = useRealtimeMessages<Omit<ChatMessage, 'id'>>(channel === 'team' ? access.teamPath : access.marketPath)
+  const messages = useRealtimeMessages<Omit<ChatMessage, 'id'>>(
+    channel === 'team' ? access.teamPath : access.marketPath,
+    channel === 'team' ? access.teamKey : access.marketKey,
+  )
 
   return (
     <>
@@ -223,7 +226,7 @@ function Thread({ conversationId, onChange, canSend }: { conversationId: string;
   // Opening it through the API sets the chat up for live reading and marks it as read
   const opened = useLoad(() => network.openConversation(business.id, conversationId), [business.id, conversationId])
   const path = opened.data ? `chat/dm/${conversationId}` : null
-  const live = useRealtimeMessages<Omit<LiveMessage, 'id'>>(path && `${path}/messages`)
+  const live = useRealtimeMessages<Omit<LiveMessage, 'id'>>(path && `${path}/messages`, opened.data?.realtimeKey)
   const lastReadAt = useRealtimeValue<Record<string, number>>(path && `${path}/meta/lastReadAt`)
 
   // Without live updates (e.g. the database rules are not deployed), show what the API returned

@@ -1,17 +1,21 @@
 import { get, limitToLast, onChildAdded, onValue, orderByChild, query, ref, set, startAfter } from 'firebase/database'
 import { useEffect, useRef, useState } from 'react'
 import { getChatAccess } from '../api/chat'
-import type { Activity, ActivityCategory } from '../api/types'
+import type { Activity, ActivityCategory, ChatAccess } from '../api/types'
 import { rtdb } from '../firebase'
 import { useAuth } from '../useAuth'
+import { decryptFields } from '../utils/crypto'
 
 // A business's activity arrives live from the Realtime Database (live/{businessId}/activity).
 // The API writes it; the browser only listens. Reading needs the API's permission first.
 
-const access = new Map<string, Promise<unknown>>()
+const access = new Map<string, Promise<ChatAccess>>()
 
-/** Asks the API (once per business and page load) to let this user read the business's live data. */
-export function ensureLiveAccess(businessId: string): Promise<unknown> {
+/**
+ * Asks the API (once per business and page load) to let this user read the business's live data.
+ * The answer also holds the keys that decrypt it.
+ */
+export function ensureLiveAccess(businessId: string): Promise<ChatAccess> {
   let asked = access.get(businessId)
   if (!asked) {
     asked = getChatAccess(businessId)
@@ -49,15 +53,16 @@ export function useOnActivity(businessId: string | null | undefined, categories:
     let stop = () => {}
     let stopped = false
     Promise.all([serverNow(), ensureLiveAccess(businessId)]).then(
-      ([now]) => {
+      ([now, { liveKey }]) => {
         if (stopped) return
         // Only what happens from now on
         const fromNow = query(ref(rtdb, feedPath(businessId)), orderByChild('createdAt'), startAfter(now))
         stop = onChildAdded(
           fromNow,
           (snapshot) => {
-            const activity = { ...(snapshot.val() as Omit<Activity, 'id'>), id: snapshot.key ?? '' }
-            if (!kinds || kinds.split(',').includes(activity.category)) latest.current(activity)
+            const sealed = { ...(snapshot.val() as Omit<Activity, 'id'>), id: snapshot.key ?? '' }
+            if (kinds && !kinds.split(',').includes(sealed.category)) return
+            decryptFields(sealed, liveKey).then((activity) => !stopped && latest.current(activity))
           },
           () => undefined, // not allowed (rules not deployed): pages still work, just not live
         )
@@ -81,16 +86,21 @@ export function useNotifications(businessId: string, limit = 20) {
     let stops: (() => void)[] = []
     let stopped = false
     ensureLiveAccess(businessId).then(
-      () => {
+      ({ liveKey }) => {
         if (stopped) return
+        let turn = 0 // decrypting takes a moment: only the newest snapshot is shown
         stops = [
           onValue(
             query(ref(rtdb, feedPath(businessId)), orderByChild('createdAt'), limitToLast(limit)),
             (snapshot) => {
-              const found = Object.entries((snapshot.val() ?? {}) as Record<string, Omit<Activity, 'id'>>)
-                .map(([id, item]) => ({ ...item, id }))
-                .sort((a, b) => b.createdAt - a.createdAt)
-              setEvents(found)
+              const mine = ++turn
+              Promise.all(
+                Object.entries((snapshot.val() ?? {}) as Record<string, Omit<Activity, 'id'>>).map(([id, item]) =>
+                  decryptFields({ ...item, id }, liveKey),
+                ),
+              ).then((found) => {
+                if (!stopped && mine === turn) setEvents(found.sort((a, b) => b.createdAt - a.createdAt))
+              })
             },
             () => setEvents([]),
           ),
