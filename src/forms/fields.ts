@@ -20,6 +20,7 @@ export type FieldType =
   | 'checkboxes' // several choices from `options` (a list)
   | 'image' // an image link, with an upload button when the form knows the business
   | 'pdf' // a PDF file (upload, view inside the app, remove), when the form knows the business
+  | 'barcode' // a barcode: typed, from a USB scanner, or read with the camera ("Scan")
   | 'privateFile' // a private file: a permit, ID, or certificate (PDF or image; only the team and admins see it)
 
 export type FieldDef = {

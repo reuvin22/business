@@ -4,6 +4,7 @@ import { PairsEditor } from '../../../components/ListEditors'
 import { ACTIVE_STATUSES, UNITS } from '../../../constants/options'
 import { cx, ui } from '../../../styles'
 import { newVariantRow, type VariantRow } from './rows'
+import BarcodeInput from '../../../components/BarcodeField'
 
 /** Variants are optional: e.g. Cola → 290ml, 1.5L, 2L. Each can have its own SKU, stock, and prices. */
 export default function VariantsEditor({ rows, onChange }: { rows: VariantRow[]; onChange: (rows: VariantRow[]) => void }) {
@@ -12,14 +13,22 @@ export default function VariantsEditor({ rows, onChange }: { rows: VariantRow[];
     onChange(rows.map((row) => (row.key === key ? { ...row, ...changes } : row)))
 
   return (
-    <FormSection title="Variants (optional)" hint="Different versions of the product, e.g. sizes or flavors. Leave empty if there is only one.">
+    <FormSection
+      title="Variants (optional)"
+      hint="Different versions of the product, e.g. sizes or flavors. Leave empty if there is only one."
+    >
       <div className="flex flex-col gap-2.5">
         {rows.map((row) => (
           <div key={row.key} className="rounded-lg border border-line p-3">
             <div className="grid grid-cols-1 items-end gap-2.5 @sm:grid-cols-2 @2xl:grid-cols-[2fr_1.4fr_1fr_1fr_auto]">
               <label className={ui.label}>
                 Variant name *
-                <input className={ui.input} value={row.variantName} onChange={(e) => update(row.key, { variantName: e.target.value })} placeholder="e.g. 1.5L" />
+                <input
+                  className={ui.input}
+                  value={row.variantName}
+                  onChange={(e) => update(row.key, { variantName: e.target.value })}
+                  placeholder="e.g. 1.5L"
+                />
               </label>
               <label className={ui.label}>
                 SKU
@@ -67,18 +76,25 @@ export default function VariantsEditor({ rows, onChange }: { rows: VariantRow[];
                       ['widthCm', 'Width (cm)'],
                       ['heightCm', 'Height (cm)'],
                     ] as const
-                  ).map(([field, label]) => (
-                    <label key={field} className={ui.label}>
-                      {label}
-                      <input
-                        className={ui.input}
-                        type={field === 'barcode' ? 'text' : 'number'}
-                        step="any"
-                        value={row[field]}
-                        onChange={(e) => update(row.key, { [field]: e.target.value })}
-                      />
-                    </label>
-                  ))}
+                  ).map(([field, label]) =>
+                    field === 'barcode' ? (
+                      <div key={field} className={cx(ui.label, '@sm:col-span-2')}>
+                        {label}
+                        <BarcodeInput value={row.barcode} onChange={(barcode) => update(row.key, { barcode })} />
+                      </div>
+                    ) : (
+                      <label key={field} className={ui.label}>
+                        {label}
+                        <input
+                          className={ui.input}
+                          type="number"
+                          step="any"
+                          value={row[field]}
+                          onChange={(e) => update(row.key, { [field]: e.target.value })}
+                        />
+                      </label>
+                    ),
+                  )}
                 </div>
                 <PairsEditor
                   title="Attributes"

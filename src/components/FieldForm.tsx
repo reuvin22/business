@@ -10,6 +10,7 @@ import {
   uploadPrivateFile,
 } from '../api/uploads'
 import { fromFormState, missingRequired, toFormState, type FieldDef, type FormState, type Section, type Values } from '../forms/fields'
+import BarcodeInput from './BarcodeField'
 import PdfViewer from './PdfViewer'
 import PrivateFileButton from './PrivateFile'
 import { cx, ui } from '../styles'
@@ -193,6 +194,15 @@ function FieldInput({
   }
   if (field.type === 'pdf') {
     return <PdfInput label={label} hint={hint} url={text} onChange={onChange} businessId={businessId} />
+  }
+  if (field.type === 'barcode') {
+    return (
+      <div className={ui.label}>
+        {label}
+        <BarcodeInput value={text} onChange={onChange} autoFocus={autoFocus} />
+        {hint}
+      </div>
+    )
   }
   if (field.type === 'privateFile') {
     return <PrivateFileInput label={label} hint={hint} value={text} onChange={onChange} businessId={businessId} />

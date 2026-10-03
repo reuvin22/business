@@ -209,7 +209,7 @@ export const productSections = (brandOptions: Option[], categoryOptions: Option[
     fields: [
       { key: 'productName', label: 'Product name', required: true, placeholder: 'e.g. Chocolate croissant' },
       { key: 'sku', label: 'SKU', placeholder: 'e.g. CRS-CHOC-01' },
-      { key: 'barcode', label: 'Barcode' },
+      { key: 'barcode', label: 'Barcode', type: 'barcode', hint: 'Type it, use a USB scanner, or tap Scan to read it with the camera.' },
       { key: 'unit', label: 'Unit', type: 'select', options: opt.UNITS, required: true },
       { key: 'categoryId', label: 'Category', type: 'select', options: categoryOptions, emptyAsNull: true },
       { key: 'brandId', label: 'Brand', type: 'select', options: brandOptions, emptyAsNull: true },
