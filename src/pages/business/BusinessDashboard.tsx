@@ -11,12 +11,17 @@ import { useLoad } from '../../hooks/useLoad'
 import { formatMoney, todayText } from '../../utils/format'
 import { cx, ui } from '../../styles'
 
-type Period = 'weekly' | 'monthly'
+type Period = 'daily' | 'weekly' | 'monthly' | 'annual'
 const PERIODS: { value: Period; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
+  { value: 'annual', label: 'Annual' },
 ]
-const PERIOD_DAYS: Record<Period, number> = { weekly: 7, monthly: 30 }
+// Every how many bars a label is shown under the chart
+const LABEL_EVERY: Record<Period, number> = { daily: 3, weekly: 1, monthly: 5, annual: 1 }
+// What one bar stands for
+const PER: Record<Period, string> = { daily: 'Hour', weekly: 'Day', monthly: 'Day', annual: 'Month' }
 
 type Money = 'revenue' | 'profit'
 const MONEY_CHARTS: { value: Money; label: string }[] = [
@@ -71,6 +76,49 @@ function lastDays(n: number, offset = 0) {
     d.setDate(today.getDate() - offset - (n - 1 - i))
     return d
   })
+}
+
+/** The last 12 months ending this month (oldest first), as the first day of each. */
+function lastMonths(n: number) {
+  const now = new Date()
+  return Array.from({ length: n }, (_, i) => new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1))
+}
+
+const monthKey = (d: Date) => todayText(d).slice(0, 7) // YYYY-MM
+
+/** One bar of a chart: its labels and which sold lines fall in it. */
+type Bucket = { label: string; tipLabel: string; has: (e: Entry) => boolean }
+
+/**
+ * The bars of a chart for a period:
+ *   daily: today, hour by hour; weekly: the last 7 days; monthly: the last 30 days; annual: the last 12 months.
+ */
+function bucketsFor(period: Period): Bucket[] {
+  if (period === 'daily') {
+    const today = todayText(new Date())
+    return Array.from({ length: 24 }, (_, hour) => {
+      const at = new Date()
+      at.setHours(hour, 0, 0, 0)
+      const label = at.toLocaleTimeString(undefined, { hour: 'numeric' })
+      return {
+        label,
+        tipLabel: `${label} – ${new Date(at.getTime() + 3_600_000).toLocaleTimeString(undefined, { hour: 'numeric' })}`,
+        has: (e) => e.date === today && new Date(e.createdAt).getHours() === hour,
+      }
+    })
+  }
+  if (period === 'annual') {
+    return lastMonths(12).map((d) => ({
+      label: d.toLocaleDateString(undefined, { month: 'short' }),
+      tipLabel: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      has: (e) => e.date.startsWith(monthKey(d)),
+    }))
+  }
+  return lastDays(period === 'weekly' ? 7 : 30).map((d) => ({
+    label: period === 'weekly' ? d.toLocaleDateString(undefined, { weekday: 'short' }) : String(d.getDate()),
+    tipLabel: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' }),
+    has: (e) => e.date === todayText(d),
+  }))
 }
 
 const revenueOf = (e: Entry) => e.quantity * e.unitPrice
@@ -131,19 +179,20 @@ export default function BusinessDashboard() {
   const cur = totals(inDays(lastDays(KPI_WINDOW)))
   const prev = totals(inDays(lastDays(KPI_WINDOW, KPI_WINDOW)))
 
-  const seriesFor = (period: Period, value: (dayEntries: Entry[]) => number): Point[] =>
-    lastDays(PERIOD_DAYS[period]).map((d) => ({
-      label: period === 'weekly' ? d.toLocaleDateString(undefined, { weekday: 'short' }) : String(d.getDate()),
-      tipLabel: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' }),
-      value: value(entries.filter((e) => e.date === todayText(d))),
-    }))
+  const seriesFor = (period: Period, value: (bucketEntries: Entry[]) => number): Point[] =>
+    bucketsFor(period).map(({ label, tipLabel, has }) => ({ label, tipLabel, value: value(entries.filter(has)) }))
+  /** Every sold line in the period (today, the last 7 or 30 days, or the last 12 months) */
+  const inPeriod = (period: Period) => {
+    const buckets = bucketsFor(period)
+    return entries.filter((e) => buckets.some((b) => b.has(e)))
+  }
 
-  const unitsPerDay = seriesFor(barPeriod, (es) => es.reduce((t, e) => t + e.quantity, 0))
-  const moneyPerDay = seriesFor(linePeriod, (es) => es.reduce((t, e) => t + (lineMoney === 'profit' ? profitOf(e) : revenueOf(e)), 0))
+  const unitsSeries = seriesFor(barPeriod, (es) => es.reduce((t, e) => t + e.quantity, 0))
+  const moneySeries = seriesFor(linePeriod, (es) => es.reduce((t, e) => t + (lineMoney === 'profit' ? profitOf(e) : revenueOf(e)), 0))
 
   // Most popular products in the chosen period
   const popularMap = new Map<string, { name: string; units: number; revenue: number; profit: number; lastPrice: number }>()
-  for (const e of inDays(lastDays(PERIOD_DAYS[popularPeriod]))) {
+  for (const e of inPeriod(popularPeriod)) {
     const row = popularMap.get(e.productId) ?? { name: e.productName, units: 0, revenue: 0, profit: 0, lastPrice: e.unitPrice }
     row.units += e.quantity
     row.revenue += revenueOf(e)
@@ -157,7 +206,7 @@ export default function BusinessDashboard() {
 
   const recent = [...entries].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5)
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  const labelEvery = (p: Period) => (p === 'weekly' ? 1 : 5)
+  const labelEvery = (p: Period) => LABEL_EVERY[p]
 
   return (
     <div className={ui.page}>
@@ -250,10 +299,10 @@ export default function BusinessDashboard() {
 
           <section className={PANEL}>
             <div className={PANEL_HEAD}>
-              <h2 className={ui.h2}>Units Sold Per Day</h2>
+              <h2 className={ui.h2}>Units Sold Per {PER[barPeriod]}</h2>
               <SegmentedToggle options={PERIODS} value={barPeriod} onChange={setBarPeriod} />
             </div>
-            <ColumnChart data={unitsPerDay} height={300} labelEvery={labelEvery(barPeriod)} format={(n) => `${n} units`} />
+            <ColumnChart data={unitsSeries} height={300} labelEvery={labelEvery(barPeriod)} format={(n) => `${n} units`} />
           </section>
         </div>
 
@@ -268,7 +317,7 @@ export default function BusinessDashboard() {
                 <SegmentedToggle options={PERIODS} value={linePeriod} onChange={setLinePeriod} />
               </div>
             </div>
-            <AreaChart data={moneyPerDay} height={300} labelEvery={labelEvery(linePeriod)} format={(n) => money(n, 2)} />
+            <AreaChart data={moneySeries} height={300} labelEvery={labelEvery(linePeriod)} format={(n) => money(n, 2)} />
           </section>
 
           <section className={PANEL}>
