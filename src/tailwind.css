@@ -4,6 +4,9 @@
    which become classes like bg-surface, text-heading, border-line. */
 @import 'tailwindcss';
 
+/* dark:... follows the chosen theme (Light / Night / Auto sets data-theme), not only the device setting */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /* short:... applies on screens that are not very tall (laptops, phones turned sideways), e.g. the sidebar gets tighter */
 @custom-variant short (@media (max-height: 820px));
 

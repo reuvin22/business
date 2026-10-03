@@ -235,7 +235,7 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
                 ))}
               </select>
             </label>
-            <BusyButton busy={active === 'CONFIRMED'} className={ui.btnPrimary} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
+            <BusyButton busy={active === 'CONFIRMED'} className={ui.btnSuccess} disabled={busy || !chosenLocation} onClick={() => setStatus('CONFIRMED', { fulfillmentLocationId: chosenLocation })}>
               Accept order
             </BusyButton>
           </div>
@@ -244,7 +244,7 @@ function SellerActions({ order, onChanged }: { order: OrderView; onChanged: () =
               Reason (for rejecting)
               <input className={ui.input} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Out of stock" />
             </label>
-            <BusyButton busy={active === 'REJECTED'} className={ui.btnGhost} disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
+            <BusyButton busy={active === 'REJECTED'} className={ui.btnDanger} disabled={busy} onClick={() => setStatus('REJECTED', { reason })}>
               Reject order
             </BusyButton>
           </div>

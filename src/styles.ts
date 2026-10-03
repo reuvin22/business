@@ -38,7 +38,8 @@ export const ui = {
   // ---- Buttons ----
   btnPrimary: cx(btn, 'border-transparent bg-side px-4 py-2.5 text-white hover:enabled:bg-black dark:bg-lime dark:text-ink dark:hover:enabled:bg-lime-light'),
   btnGhost: cx(btn, 'border-line bg-surface px-3.5 py-1.75 text-[0.88rem] text-heading hover:border-muted'),
-  btnDanger: cx(btn, 'border-transparent bg-danger px-4 py-2.5 text-white'),
+  btnDanger: cx(btn, 'border-transparent bg-danger px-4 py-2.5 text-white hover:enabled:brightness-95'),
+  btnSuccess: cx(btn, 'border-transparent bg-up px-4 py-2.5 text-white hover:enabled:brightness-95'),
   link: cx(linkButton, 'text-accent'),
   linkDanger: cx(linkButton, 'text-danger'),
 
